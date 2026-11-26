@@ -4,10 +4,10 @@
 
 GPU を一切使わないので、ゲームをしながらでも気にせず使える。
 
-- ⚡ **高速**：13 秒の音声を約 0.3 秒で文字にする。CPU だけで動く
-- 🪶 **軽量**：待機中のメモリは 30〜40 MB、VRAM は 0 MB
-- 🇯🇵 **日本語専用モデル**：NVIDIA が日本語だけで学習させた [Parakeet 日本語版](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja) を使う
-- 🔒 **完全ローカル**：音声も文字も外部に送らない。無料・オープンソース
+- ⚡ **高速**：話す速さの約 40 倍で文字にする（13 秒の発話が約 0.3 秒）。CPU だけで動く
+- 🪶 **軽量**：待機中 30〜40 MB、VRAM 0 MB
+- 🇯🇵 **日本語専用**：NVIDIA の [Parakeet 日本語版](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja)
+- 🔒 **完全ローカル**：音声を外部に送らない。無料・オープンソース
 
 [📚 ドキュメントサイト](https://azarasi1226.github.io/azarasi-voice/)
 
