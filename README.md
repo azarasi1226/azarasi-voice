@@ -10,11 +10,14 @@ Windows 用の音声入力ツール。ホットキーを押している間だけ
 
 ## インストール
 
-1. [Releases](https://github.com/azarasi1226/azarasi-voice/releases/latest) から `azarasi-voice.exe` をダウンロードし、好きな場所に置く
-2. `azarasi-voice.exe` を起動する
+1. [Releases](https://github.com/azarasi1226/azarasi-voice/releases/latest) から `azarasi-voice-setup-<バージョン>.exe` をダウンロードして実行する
    - 「Windows によって PC が保護されました」と出たら「詳細情報」→「実行」
-3. 初回だけ、音声認識モデル（約 655 MB）のダウンロード画面が出る。終わると自動でタスクトレイに常駐する
-4. タスクトレイの「∧」の中にあるあざらしのアイコンを、時計の横までドラッグしておくと、録音中かどうかがひと目でわかる
+   - 管理者権限は要らない。`%LOCALAPPDATA%\Programs\azarasi-voice` にインストールされ、スタートメニューに登録される
+   - 「Windows の起動時に自動で起動する」を選べる（後から設定画面でも変えられる）
+2. インストールが終わると起動する。初回だけ、音声認識モデル（約 655 MB）のダウンロード画面が出る。終わると自動でタスクトレイに常駐する
+3. タスクトレイの「∧」の中にあるあざらしのアイコンを、時計の横までドラッグしておくと、録音中かどうかがひと目でわかる
+
+インストールせずに使いたいときは、Releases の `azarasi-voice.exe`（単体版）をダウンロードして、好きな場所に置いて起動する。単体版で自動起動を有効にした後に exe を移動すると、自動起動されなくなるので、移動先で設定画面を開いて保存し直す。
 
 **スマート アプリ コントロールについて**：Windows のスマート アプリ コントロールがオンだと、署名のない exe は起動できない。[SignPath Foundation](https://signpath.org/) のオープンソース向けの無料署名を申請する予定。
 
@@ -31,10 +34,18 @@ Windows 用の音声入力ツール。ホットキーを押している間だけ
 
 ## アンインストール
 
+**インストーラーでインストールした場合**：Windows の「設定」→「アプリ」→「インストールされているアプリ」から azarasi-voice をアンインストールする。起動中なら終了を促される。次のものもまとめて消える。
+
+- 自動起動の登録
+- 設定（`%APPDATA%\azarasi-voice`）
+- 音声認識モデル（`%LOCALAPPDATA%\azarasi-voice`）
+
+**単体版の場合**：
+
 1. 設定画面で「Windows の起動時に自動で起動する」のチェックを外して保存する
 2. トレイのアイコンを右クリック →「終了」
-3. 次のフォルダを削除する
-   - `azarasi-voice.exe` を置いた場所
+3. 次のものを削除する
+   - `azarasi-voice.exe`
    - `%LOCALAPPDATA%\azarasi-voice`（音声認識モデル）
    - `%APPDATA%\azarasi-voice`（設定）
 
@@ -61,6 +72,7 @@ Free code signing provided by [SignPath.io](https://about.signpath.io/), certifi
 | モデル | `%LOCALAPPDATA%\azarasi-voice\model`。初回起動時に [Releases](https://github.com/azarasi1226/azarasi-voice/releases/tag/model-parakeet-ja-int8-v1) からダウンロードし、SHA-256 で中身を確認する |
 | 設定 | `%APPDATA%\azarasi-voice\config.toml`。設定画面で保存すると、次にホットキーを押したときに反映される |
 | 自動起動 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` に登録・解除する |
+| インストーラー | [Inno Setup](https://jrsoftware.org/isinfo.php)（`installer/azarasi-voice.iss`）。CI の Windows ランナーで作る |
 | 画面 | 設定画面とダウンロード画面は別プロセスで、閉じるとプロセスごと終了する。Slint のソフトウェアレンダラーで描画するので GPU は使わない |
 
 ### 計測結果（Ryzen 9 9900X3D、4 スレッド）

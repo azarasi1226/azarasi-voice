@@ -1,5 +1,6 @@
 # Windows 用 exe をビルドする。ローカルと同じく Linux 上で cargo-xwin を使ってクロスコンパイルする。
-# v* のタグを push すると、ビルドした exe を GitHub Release に添付する。
+# インストーラーは Inno Setup が Windows 専用なので、Windows のランナーで作る。
+# v* のタグを push すると、インストーラーと exe 単体を GitHub Release に添付する。
 name: build
 
 on:
@@ -37,14 +38,47 @@ jobs:
       - name: Build
         run: mise run build
 
+      - name: Collect exe and icon
+        run: |
+          mkdir -p dist
+          cp target/x86_64-pc-windows-msvc/release/azarasi-voice.exe dist/
+          # build.rs が生成した .ico（インストーラーのアイコンに使う）
+          ico="$(find target/x86_64-pc-windows-msvc/release/build -name azarasi-voice.ico -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)"
+          cp "$ico" dist/
+
       - uses: actions/upload-artifact@v7
         with:
           name: azarasi-voice
-          path: target/x86_64-pc-windows-msvc/release/azarasi-voice.exe
+          path: dist/
+
+  installer:
+    needs: build
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: azarasi-voice
+          path: dist
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          $version = if ($env:GITHUB_REF -like 'refs/tags/v*') { $env:GITHUB_REF_NAME.Substring(1) } else { "0.0.0-dev" }
+          & $iscc "/DAppVersion=$version" "/DExePath=$PWD\dist\azarasi-voice.exe" "/DIconPath=$PWD\dist\azarasi-voice.ico" installer\azarasi-voice.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: azarasi-voice-setup
+          path: installer/Output/*.exe
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, installer]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -52,7 +86,10 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: azarasi-voice
+      - uses: actions/download-artifact@v8
+        with:
+          name: azarasi-voice-setup
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" azarasi-voice.exe --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" azarasi-voice-setup-*.exe azarasi-voice.exe --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
