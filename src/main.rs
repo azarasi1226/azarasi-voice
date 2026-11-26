@@ -1,15 +1,27 @@
 //! voice-input 本体。Win + 左 Ctrl を押している間だけ録音し、離したら文字にして貼り付ける。
 //!
-//! voice-input.exe [--model <dir>] [--threads <n>] [--unload-after <秒, 0 で外さない>]
+//! voice-input.exe [--console] [--model <dir>]
+//! voice-input.exe --settings   … 設定画面（トレイから起動される別プロセス）
+//!
+//! 通常はコンソールを出さずにタスクトレイに常駐する。`--console` でログ表示用のコンソールを開く。
+//! 設定は %APPDATA%\voice-input\config.toml。
+
+#![cfg_attr(windows, windows_subsystem = "windows")]
 
 #[cfg(windows)]
 mod asr;
 #[cfg(windows)]
 mod audio;
 #[cfg(windows)]
+mod config;
+#[cfg(windows)]
 mod hotkey;
 #[cfg(windows)]
 mod paste;
+#[cfg(windows)]
+mod settings;
+#[cfg(windows)]
+mod tray;
 
 #[cfg(not(windows))]
 fn main() {
@@ -17,31 +29,49 @@ fn main() {
     std::process::exit(1);
 }
 
+/// 名前付きミューテックスで二重起動を防ぐ。既に起動していれば false。
+#[cfg(windows)]
+fn acquire_single_instance(name: &str) -> bool {
+    use windows_sys::Win32::Foundation::{ERROR_ALREADY_EXISTS, GetLastError};
+    use windows_sys::Win32::System::Threading::CreateMutexW;
+    let wide: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
+    // ハンドルはプロセス終了まで保持する（閉じない）
+    let handle = unsafe { CreateMutexW(std::ptr::null(), 0, wide.as_ptr()) };
+    !handle.is_null() && unsafe { GetLastError() } != ERROR_ALREADY_EXISTS
+}
+
 #[cfg(windows)]
 fn main() -> anyhow::Result<()> {
     use anyhow::Context;
+    use config::Config;
     use hotkey::HotkeyEvent;
     use std::path::PathBuf;
     use std::sync::mpsc;
-    use std::time::Duration;
 
-    // 引数
+    let args: Vec<String> = std::env::args().skip(1).collect();
+
+    if args.first().map(String::as_str) == Some("--settings") {
+        if !acquire_single_instance("Local\\voice-input-settings") {
+            return Ok(()); // 設定画面は既に開いている
+        }
+        return settings::run();
+    }
+
     let exe_dir = std::env::current_exe()?.parent().map(PathBuf::from).unwrap_or_default();
     let mut model_dir = exe_dir.join("model");
-    let mut threads = 4;
-    let mut unload_after = Some(Duration::from_secs(300));
-    let mut args = std::env::args().skip(1);
-    while let Some(a) = args.next() {
-        let mut value = || args.next().with_context(|| format!("{a} に値がない"));
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
         match a.as_str() {
-            "--model" => model_dir = value()?.into(),
-            "--threads" => threads = value()?.parse()?,
-            "--unload-after" => {
-                let secs: u64 = value()?.parse()?;
-                unload_after = (secs > 0).then(|| Duration::from_secs(secs));
-            }
+            "--console" => unsafe {
+                windows_sys::Win32::System::Console::AllocConsole();
+            },
+            "--model" => model_dir = it.next().context("--model に値がない")?.into(),
             other => anyhow::bail!("不明な引数: {other}"),
         }
+    }
+
+    if !acquire_single_instance("Local\\voice-input") {
+        return Ok(()); // 既に常駐している
     }
     anyhow::ensure!(
         model_dir.join("model.int8.onnx").exists(),
@@ -50,10 +80,16 @@ fn main() -> anyhow::Result<()> {
     );
 
     // 音声認識ワーカー
+    let mut config = Config::load();
+    let mut config_mtime = config::modified();
     let (job_tx, job_rx) = mpsc::channel();
-    let config = asr::AsrConfig { model_dir, threads, unload_after };
+    let asr_config = asr::AsrConfig {
+        model_dir,
+        threads: config.threads as i32,
+        unload_after: config.unload_after(),
+    };
     std::thread::spawn(move || {
-        asr::run(config, job_rx, |text| {
+        asr::run(asr_config, job_rx, |text| {
             if let Err(e) = paste::paste(&text) {
                 eprintln!("[paste] 貼り付けに失敗: {e}");
             }
@@ -67,10 +103,26 @@ fn main() -> anyhow::Result<()> {
         for event in key_rx {
             match event {
                 HotkeyEvent::Pressed => {
+                    // 設定画面で変更されていたら読み直す
+                    let mtime = config::modified();
+                    if mtime != config_mtime {
+                        config_mtime = mtime;
+                        let new = Config::load();
+                        if new != config {
+                            println!("[config] 設定を読み直した: threads={}, unload_after_minutes={}", new.threads, new.unload_after_minutes);
+                            config = new;
+                            let _ = job_tx.send(asr::Job::Reconfigure {
+                                threads: config.threads as i32,
+                                unload_after: config.unload_after(),
+                            });
+                        }
+                    }
+
                     let _ = job_tx.send(asr::Job::Prepare);
                     match audio::Recording::start() {
                         Ok(r) => {
                             println!("[rec] 録音開始");
+                            tray::notify(tray::Status::Recording);
                             recording = Some(r);
                         }
                         Err(e) => eprintln!("[rec] 録音を開始できない: {e}"),
@@ -78,6 +130,7 @@ fn main() -> anyhow::Result<()> {
                 }
                 HotkeyEvent::Released => {
                     let Some(r) = recording.take() else { continue };
+                    tray::notify(tray::Status::Idle);
                     let samples = r.finish();
                     let sample_rate = audio::SAMPLE_RATE;
                     let sec = samples.len() as f32 / sample_rate as f32;
@@ -91,6 +144,7 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
-    println!("voice-input 起動。Win + 左 Ctrl を押している間だけ録音する。終了は Ctrl+C。");
-    hotkey::run(key_tx)
+    hotkey::install(key_tx)?;
+    println!("voice-input 起動。Win + 左 Ctrl を押している間だけ録音する。終了はトレイのメニューから。");
+    tray::run()
 }

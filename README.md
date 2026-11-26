@@ -20,6 +20,17 @@ Windows 用の音声入力ツール。ホットキーを押している間だけ
 | 見た目 | タスクトレイに常駐。アイコンをクリックすると設定画面が開く |
 | ビルド | WSL から Windows 用の exe をクロスコンパイル（`cargo-xwin`） |
 
+## 使い方
+
+`mise run deploy` で `%LOCALAPPDATA%\voice-input` に exe とモデルが置かれる。`voice-input.exe` を起動するとタスクトレイに常駐する。
+
+- Win + 左 Ctrl を押している間だけ録音（トレイのアイコンが赤くなる）。離すと文字にして貼り付ける
+- トレイのアイコンを左クリックで設定画面、右クリックでメニュー（設定を開く / 終了）
+- 設定は `%APPDATA%\voice-input\config.toml`。設定画面で保存すると、次にホットキーを押したときに反映される
+- ログを見たいときは `voice-input.exe --console` で起動する
+
+設定画面（`voice-input.exe --settings`）は別プロセスで、閉じるとプロセスごと終了する。Slint のソフトウェアレンダラーで描画するので GPU は使わない。
+
 ### 計測結果（Windows、Ryzen 9 9900X3D、4 スレッド）
 
 | 項目 | 結果 |

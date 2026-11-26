@@ -10,9 +10,8 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, SendInput, VK_LCONTROL, VK_LWIN,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, DispatchMessageW, GetMessageW, HC_ACTION, KBDLLHOOKSTRUCT, LLKHF_INJECTED, MSG,
-    SetWindowsHookExW, TranslateMessage, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN,
-    WM_SYSKEYUP,
+    CallNextHookEx, HC_ACTION, KBDLLHOOKSTRUCT, LLKHF_INJECTED, SetWindowsHookExW, WH_KEYBOARD_LL,
+    WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -33,19 +32,12 @@ struct State {
 static SENDER: OnceLock<Sender<HotkeyEvent>> = OnceLock::new();
 static STATE: Mutex<State> = Mutex::new(State { lwin: false, lctrl: false, active: false, win_used: false });
 
-/// フックを登録してメッセージループを回す。戻らない。
-pub fn run(sender: Sender<HotkeyEvent>) -> ! {
-    SENDER.set(sender).expect("hotkey::run は一度だけ呼ぶ");
-    unsafe {
-        let hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(hook_proc), std::ptr::null_mut(), 0);
-        assert!(!hook.is_null(), "キーボードフックを登録できない");
-        let mut msg: MSG = std::mem::zeroed();
-        while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
-            TranslateMessage(&msg);
-            DispatchMessageW(&msg);
-        }
-    }
-    std::process::exit(0);
+/// フックを登録する。呼んだスレッドでメッセージループを回す必要がある。
+pub fn install(sender: Sender<HotkeyEvent>) -> anyhow::Result<()> {
+    SENDER.set(sender).map_err(|_| anyhow::anyhow!("hotkey::install は一度だけ呼ぶ"))?;
+    let hook = unsafe { SetWindowsHookExW(WH_KEYBOARD_LL, Some(hook_proc), std::ptr::null_mut(), 0) };
+    anyhow::ensure!(!hook.is_null(), "キーボードフックを登録できない");
+    Ok(())
 }
 
 unsafe extern "system" fn hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {

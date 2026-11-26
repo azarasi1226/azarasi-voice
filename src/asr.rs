@@ -16,13 +16,15 @@ pub struct AsrConfig {
 }
 
 pub enum Job {
+    /// 設定が変わった。スレッド数が変わったらモデルを読み直す。
+    Reconfigure { threads: i32, unload_after: Option<Duration> },
     /// 録音開始。まだならモデルを読み込んでおく。
     Prepare,
     /// 録音した音声を文字にして、結果を `on_text` に渡す。
     Transcribe { samples: Vec<f32>, sample_rate: u32 },
 }
 
-pub fn run(config: AsrConfig, jobs: Receiver<Job>, mut on_text: impl FnMut(String)) {
+pub fn run(mut config: AsrConfig, jobs: Receiver<Job>, mut on_text: impl FnMut(String)) {
     let mut recognizer: Option<OfflineRecognizer> = None;
 
     loop {
@@ -41,6 +43,15 @@ pub fn run(config: AsrConfig, jobs: Receiver<Job>, mut on_text: impl FnMut(Strin
                 Err(_) => return,
             },
         };
+
+        if let Job::Reconfigure { threads, unload_after } = job {
+            if threads != config.threads {
+                recognizer = None; // 次の録音開始で新しいスレッド数で読み込む
+            }
+            config.threads = threads;
+            config.unload_after = unload_after;
+            continue;
+        }
 
         if recognizer.is_none() {
             recognizer = load(&config);

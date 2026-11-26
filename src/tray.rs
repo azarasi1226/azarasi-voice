@@ -1,0 +1,110 @@
+//! タスクトレイのアイコンとメニュー。
+//!
+//! アイコンはメインスレッド（メッセージループのあるスレッド）でしか触れないので、
+//! 他のスレッドからは `notify` でスレッドメッセージを送って状態を伝える。
+
+use anyhow::Result;
+use std::sync::atomic::{AtomicU32, Ordering};
+use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
+use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
+use windows_sys::Win32::System::Threading::GetCurrentThreadId;
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    DispatchMessageW, GetMessageW, MSG, PostThreadMessageW, TranslateMessage, WM_APP,
+};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum Status {
+    Idle = WM_APP + 1,
+    Recording = WM_APP + 2,
+    Quit = WM_APP + 3,
+}
+
+static MAIN_THREAD: AtomicU32 = AtomicU32::new(0);
+
+/// メインスレッドに状態の変化を伝える。どのスレッドからでも呼べる。
+pub fn notify(status: Status) {
+    let tid = MAIN_THREAD.load(Ordering::Relaxed);
+    if tid != 0 {
+        unsafe { PostThreadMessageW(tid, status as u32, 0, 0) };
+    }
+}
+
+/// トレイアイコンを作ってメッセージループを回す。「終了」が選ばれたら戻る。
+pub fn run() -> Result<()> {
+    MAIN_THREAD.store(unsafe { GetCurrentThreadId() }, Ordering::Relaxed);
+
+    let open_item = MenuItem::new("設定を開く", true, None);
+    let quit_item = MenuItem::new("終了", true, None);
+    let menu = Menu::new();
+    menu.append(&open_item)?;
+    menu.append(&PredefinedMenuItem::separator())?;
+    menu.append(&quit_item)?;
+
+    let idle_icon = circle_icon([150, 150, 150])?;
+    let recording_icon = circle_icon([230, 60, 60])?;
+    let tray: TrayIcon = TrayIconBuilder::new()
+        .with_icon(idle_icon.clone())
+        .with_tooltip("voice-input（Win + 左 Ctrl で録音）")
+        .with_menu(Box::new(menu))
+        .with_menu_on_left_click(false)
+        .build()?;
+
+    TrayIconEvent::set_event_handler(Some(|e| {
+        if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = e {
+            open_settings();
+        }
+    }));
+    let (open_id, quit_id) = (open_item.id().clone(), quit_item.id().clone());
+    MenuEvent::set_event_handler(Some(std::sync::Arc::new(move |e: MenuEvent| {
+        if e.id == open_id {
+            open_settings();
+        } else if e.id == quit_id {
+            notify(Status::Quit);
+        }
+    })));
+
+    unsafe {
+        let mut msg: MSG = std::mem::zeroed();
+        while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
+            match msg.message {
+                m if m == Status::Idle as u32 => {
+                    let _ = tray.set_icon(Some(idle_icon.clone()));
+                }
+                m if m == Status::Recording as u32 => {
+                    let _ = tray.set_icon(Some(recording_icon.clone()));
+                }
+                m if m == Status::Quit as u32 => break,
+                _ => {
+                    TranslateMessage(&msg);
+                    DispatchMessageW(&msg);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// 設定画面を別プロセスで開く。
+fn open_settings() {
+    let result = std::env::current_exe().and_then(|exe| std::process::Command::new(exe).arg("--settings").spawn());
+    if let Err(e) = result {
+        eprintln!("[tray] 設定画面を開けない: {e}");
+    }
+}
+
+/// 単色の丸いアイコンを作る。
+fn circle_icon([r, g, b]: [u8; 3]) -> Result<Icon> {
+    const SIZE: u32 = 32;
+    let mut rgba = Vec::with_capacity((SIZE * SIZE * 4) as usize);
+    let c = (SIZE as f32 - 1.0) / 2.0;
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let d = ((x as f32 - c).powi(2) + (y as f32 - c).powi(2)).sqrt();
+            // 縁を 1px ぼかしてギザギザを抑える
+            let alpha = (c - 1.0 - d + 0.5).clamp(0.0, 1.0);
+            rgba.extend_from_slice(&[r, g, b, (alpha * 255.0) as u8]);
+        }
+    }
+    Ok(Icon::from_rgba(rgba, SIZE, SIZE)?)
+}
