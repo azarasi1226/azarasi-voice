@@ -14,16 +14,16 @@ run = "cargo xwin build --release --target x86_64-pc-windows-msvc"
 run = "cargo xwin check --target x86_64-pc-windows-msvc"
 
 [tasks.deploy]
-description = "ビルドして %LOCALAPPDATA%\\voice-input にモデルと一緒に配置"
+description = "ビルドして %LOCALAPPDATA%\\azarasi-voice にモデルと一緒に配置"
 depends = ["build"]
 run = '''
 set -eu
-dest="$(wslpath "$(cmd.exe /c 'echo %LOCALAPPDATA%' 2>/dev/null | tr -d '\r')")/voice-input"
+dest="$(wslpath "$(cmd.exe /c 'echo %LOCALAPPDATA%' 2>/dev/null | tr -d '\r')")/azarasi-voice"
 mkdir -p "$dest"
 # 起動中の exe は上書きできないが名前変更はできるので、古い方を退避してから置く
-rm -f "$dest"/voice-input.old-*.exe 2>/dev/null || true  # 使用中のものは消えずに残る
-if [ -f "$dest/voice-input.exe" ]; then mv "$dest/voice-input.exe" "$dest/voice-input.old-$(date +%s).exe"; fi
-cp target/x86_64-pc-windows-msvc/release/voice-input.exe "$dest/"
+rm -f "$dest"/azarasi-voice.old-*.exe 2>/dev/null || true  # 使用中のものは消えずに残る
+if [ -f "$dest/azarasi-voice.exe" ]; then mv "$dest/azarasi-voice.exe" "$dest/azarasi-voice.old-$(date +%s).exe"; fi
+cp target/x86_64-pc-windows-msvc/release/azarasi-voice.exe "$dest/"
 if [ ! -f "$dest/model/model.int8.onnx" ]; then
   cp -r models/sherpa-onnx-nemo-parakeet-tdt_ctc-0.6b-ja-35000-int8 "$dest/model"
 fi

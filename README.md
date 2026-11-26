@@ -1,4 +1,4 @@
-# voice-input
+# azarasi-voice
 
 Windows 用の音声入力ツール。ホットキーを押している間だけ録音し、ローカルの音声認識で文字にして、（必要なら）Claude で整えてから、開いているウィンドウに貼り付ける。
 
@@ -22,15 +22,16 @@ Windows 用の音声入力ツール。ホットキーを押している間だけ
 
 ## 使い方
 
-`mise run deploy` で `%LOCALAPPDATA%\voice-input` に exe とモデルが置かれる。`voice-input.exe` を起動するとタスクトレイに常駐する。
+`mise run deploy` で `%LOCALAPPDATA%\azarasi-voice` に exe とモデルが置かれる。`azarasi-voice.exe` を起動するとタスクトレイに常駐する。
 
 - Win + 左 Ctrl を押している間だけ録音（トレイのアイコンが赤くなる）。離すと文字にして貼り付ける
+- トレイのアイコンは待機中が紺、録音中が赤、認識中がオレンジ。「∧」の中に隠れていると見えないので、時計の横までドラッグして常に表示しておく
 - トレイのアイコンを左クリックで設定画面、右クリックでメニュー（設定を開く / 終了）
-- 設定は `%APPDATA%\voice-input\config.toml`。設定画面で保存すると、次にホットキーを押したときに反映される
+- 設定は `%APPDATA%\azarasi-voice\config.toml`。設定画面で保存すると、次にホットキーを押したときに反映される
 - 設定画面の「Windows の起動時に自動で起動する」で、`HKCU\...\CurrentVersion\Run` に登録・解除する
-- ログを見たいときは `voice-input.exe --console` で起動する
+- ログを見たいときは `azarasi-voice.exe --console` で起動する
 
-設定画面（`voice-input.exe --settings`）は別プロセスで、閉じるとプロセスごと終了する。Slint のソフトウェアレンダラーで描画するので GPU は使わない。
+設定画面（`azarasi-voice.exe --settings`）は別プロセスで、閉じるとプロセスごと終了する。Slint のソフトウェアレンダラーで描画するので GPU は使わない。
 
 ### 計測結果（Windows、Ryzen 9 9900X3D、4 スレッド）
 

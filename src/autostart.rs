@@ -10,7 +10,7 @@ use windows_sys::Win32::System::Registry::{
 };
 
 const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
-const VALUE_NAME: &str = "voice-input";
+const VALUE_NAME: &str = "azarasi-voice";
 
 fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
@@ -35,13 +35,13 @@ pub fn is_enabled() -> bool {
 
 /// 自動起動を登録・解除する。
 ///
-/// 登録するのは今動いている exe と同じフォルダの `voice-input.exe`。
-/// デプロイ時に古い exe は `voice-input.old-*.exe` に名前を変えられるので、
+/// 登録するのは今動いている exe と同じフォルダの `azarasi-voice.exe`。
+/// デプロイ時に古い exe は `azarasi-voice.old-*.exe` に名前を変えられるので、
 /// current_exe() をそのまま使うと消える予定のファイルを登録してしまうことがある。
 pub fn set_enabled(enabled: bool) -> Result<()> {
     let (key, name) = (wide(RUN_KEY), wide(VALUE_NAME));
     let status = if enabled {
-        let exe = std::env::current_exe()?.with_file_name("voice-input.exe");
+        let exe = std::env::current_exe()?.with_file_name("azarasi-voice.exe");
         let command = wide(&format!("\"{}\"", exe.display()));
         unsafe {
             RegSetKeyValueW(

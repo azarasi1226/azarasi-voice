@@ -1,4 +1,4 @@
-//! 設定画面（`voice-input.exe --settings` で起動する別プロセス）。
+//! 設定画面（`azarasi-voice.exe --settings` で起動する別プロセス）。
 //!
 //! 閉じたらプロセスごと終了するので、常駐中の本体のメモリは増えない。
 //! GPU を使わないよう、Slint のソフトウェアレンダラー（CPU 描画）だけを有効にしている。
@@ -14,7 +14,7 @@ slint::slint! {
     import { Button, CheckBox, ComboBox, LineEdit, SpinBox, GroupBox, TabWidget, AboutSlint } from "std-widgets.slint";
 
     export component SettingsWindow inherits Window {
-        title: "voice-input 設定";
+        title: "azarasi-voice 設定";
         preferred-width: 460px;
         default-font-family: "Yu Gothic UI";
         default-font-size: 14px;
@@ -95,7 +95,7 @@ slint::slint! {
                     VerticalLayout {
                         padding: 8px;
                         alignment: start;
-                        Text { text: "voice-input — ローカル音声認識（Parakeet 日本語版）による音声入力"; wrap: word-wrap; }
+                        Text { text: "azarasi-voice — ローカル音声認識（Parakeet 日本語版）による音声入力"; wrap: word-wrap; }
                         AboutSlint { }
                     }
                 }

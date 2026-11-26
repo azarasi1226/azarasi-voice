@@ -32,16 +32,16 @@ fn main() {
     }
 }
 
-/// .ico を作ってリソースとして voice-input.exe に埋め込む。
+/// .ico を作ってリソースとして azarasi-voice.exe に埋め込む。
 fn embed_icon(out_dir: &Path) {
-    let ico = out_dir.join("voice-input.ico");
+    let ico = out_dir.join("azarasi-voice.ico");
     std::fs::write(&ico, build_ico(&[16, 24, 32, 48, 64, 256])).unwrap();
 
-    let rc = out_dir.join("voice-input.rc");
+    let rc = out_dir.join("azarasi-voice.rc");
     let ico_str = ico.display().to_string().replace('\\', "\\\\");
     std::fs::write(&rc, format!("1 ICON \"{ico_str}\"\n")).unwrap();
 
-    let res = out_dir.join("voice-input.res");
+    let res = out_dir.join("azarasi-voice.res");
     let rc_tool = if cfg!(windows) { "rc.exe" } else { "llvm-rc" };
     let status = Command::new(rc_tool)
         .arg("/FO")
@@ -52,7 +52,7 @@ fn embed_icon(out_dir: &Path) {
     assert!(status.success(), "{rc_tool} が失敗した");
 
     // lld-link / link.exe はどちらも .res をそのまま入力に取れる
-    println!("cargo:rustc-link-arg-bin=voice-input={}", res.display());
+    println!("cargo:rustc-link-arg-bin=azarasi-voice={}", res.display());
 }
 
 /// 32bpp の BMP 形式で複数サイズを入れた .ico を作る。

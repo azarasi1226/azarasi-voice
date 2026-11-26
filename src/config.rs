@@ -1,4 +1,4 @@
-//! 設定ファイル（%APPDATA%\voice-input\config.toml）の読み書き。
+//! 設定ファイル（%APPDATA%\azarasi-voice\config.toml）の読み書き。
 //!
 //! 設定画面は別プロセスなので、本体とはこのファイルを介してやりとりする。
 
@@ -72,7 +72,7 @@ impl Config {
 
 pub fn dir() -> Result<PathBuf> {
     let appdata = std::env::var_os("APPDATA").context("APPDATA が無い")?;
-    Ok(PathBuf::from(appdata).join("voice-input"))
+    Ok(PathBuf::from(appdata).join("azarasi-voice"))
 }
 
 pub fn path() -> Result<PathBuf> {

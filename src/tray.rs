@@ -48,7 +48,7 @@ pub fn run() -> Result<()> {
     let processing_icon = make_icon(icon_draw::COLOR_PROCESSING)?;
     let tray: TrayIcon = TrayIconBuilder::new()
         .with_icon(idle_icon.clone())
-        .with_tooltip("voice-input（Win + 左 Ctrl で録音）")
+        .with_tooltip("azarasi-voice（Win + 左 Ctrl で録音）")
         .with_menu(Box::new(menu))
         .with_menu_on_left_click(false)
         .build()?;

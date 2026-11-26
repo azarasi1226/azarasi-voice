@@ -1,10 +1,10 @@
-//! voice-input 本体。Win + 左 Ctrl を押している間だけ録音し、離したら文字にして貼り付ける。
+//! azarasi-voice 本体。Win + 左 Ctrl を押している間だけ録音し、離したら文字にして貼り付ける。
 //!
-//! voice-input.exe [--console] [--model <dir>]
-//! voice-input.exe --settings   … 設定画面（トレイから起動される別プロセス）
+//! azarasi-voice.exe [--console] [--model <dir>]
+//! azarasi-voice.exe --settings   … 設定画面（トレイから起動される別プロセス）
 //!
 //! 通常はコンソールを出さずにタスクトレイに常駐する。`--console` でログ表示用のコンソールを開く。
-//! 設定は %APPDATA%\voice-input\config.toml。
+//! 設定は %APPDATA%\azarasi-voice\config.toml。
 
 #![cfg_attr(windows, windows_subsystem = "windows")]
 
@@ -29,7 +29,7 @@ mod tray;
 
 #[cfg(not(windows))]
 fn main() {
-    eprintln!("voice-input は Windows 専用。`mise run build` で exe をビルドする。");
+    eprintln!("azarasi-voice は Windows 専用。`mise run build` で exe をビルドする。");
     std::process::exit(1);
 }
 
@@ -55,7 +55,7 @@ fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
     if args.first().map(String::as_str) == Some("--settings") {
-        if !acquire_single_instance("Local\\voice-input-settings") {
+        if !acquire_single_instance("Local\\azarasi-voice-settings") {
             return Ok(()); // 設定画面は既に開いている
         }
         return settings::run();
@@ -74,7 +74,7 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    if !acquire_single_instance("Local\\voice-input") {
+    if !acquire_single_instance("Local\\azarasi-voice") {
         return Ok(()); // 既に常駐している
     }
     anyhow::ensure!(
@@ -153,6 +153,6 @@ fn main() -> anyhow::Result<()> {
     });
 
     hotkey::install(key_tx)?;
-    println!("voice-input 起動。Win + 左 Ctrl を押している間だけ録音する。終了はトレイのメニューから。");
+    println!("azarasi-voice 起動。Win + 左 Ctrl を押している間だけ録音する。終了はトレイのメニューから。");
     tray::run()
 }
