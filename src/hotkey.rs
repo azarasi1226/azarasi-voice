@@ -30,12 +30,20 @@ struct State {
 }
 
 static SENDER: OnceLock<Sender<HotkeyEvent>> = OnceLock::new();
-static STATE: Mutex<State> = Mutex::new(State { lwin: false, lctrl: false, active: false, win_used: false });
+static STATE: Mutex<State> = Mutex::new(State {
+    lwin: false,
+    lctrl: false,
+    active: false,
+    win_used: false,
+});
 
 /// フックを登録する。呼んだスレッドでメッセージループを回す必要がある。
 pub fn install(sender: Sender<HotkeyEvent>) -> anyhow::Result<()> {
-    SENDER.set(sender).map_err(|_| anyhow::anyhow!("hotkey::install は一度だけ呼ぶ"))?;
-    let hook = unsafe { SetWindowsHookExW(WH_KEYBOARD_LL, Some(hook_proc), std::ptr::null_mut(), 0) };
+    SENDER
+        .set(sender)
+        .map_err(|_| anyhow::anyhow!("hotkey::install は一度だけ呼ぶ"))?;
+    let hook =
+        unsafe { SetWindowsHookExW(WH_KEYBOARD_LL, Some(hook_proc), std::ptr::null_mut(), 0) };
     anyhow::ensure!(!hook.is_null(), "キーボードフックを登録できない");
     Ok(())
 }
@@ -89,9 +97,21 @@ fn send_mask_key() {
     let key = |flags| INPUT {
         r#type: INPUT_KEYBOARD,
         Anonymous: INPUT_0 {
-            ki: KEYBDINPUT { wVk: 0xE8, wScan: 0, dwFlags: flags, time: 0, dwExtraInfo: 0 },
+            ki: KEYBDINPUT {
+                wVk: 0xE8,
+                wScan: 0,
+                dwFlags: flags,
+                time: 0,
+                dwExtraInfo: 0,
+            },
         },
     };
     let inputs = [key(0), key(KEYEVENTF_KEYUP)];
-    unsafe { SendInput(inputs.len() as u32, inputs.as_ptr(), size_of::<INPUT>() as i32) };
+    unsafe {
+        SendInput(
+            inputs.len() as u32,
+            inputs.as_ptr(),
+            size_of::<INPUT>() as i32,
+        )
+    };
 }

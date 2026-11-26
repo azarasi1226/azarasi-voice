@@ -2,13 +2,17 @@
 //!
 //! cargo run --release --bin bench -- <モデルのディレクトリ> <スレッド数> <wav>...
 
-use sherpa_onnx::{OfflineNemoEncDecCtcModelConfig, OfflineRecognizer, OfflineRecognizerConfig, Wave};
+use sherpa_onnx::{
+    OfflineNemoEncDecCtcModelConfig, OfflineRecognizer, OfflineRecognizerConfig, Wave,
+};
 use std::time::Instant;
 
 /// 現在の常駐メモリ（Windows はワーキングセット）を MB で返す。
 #[cfg(windows)]
 fn rss_mb() -> Option<f64> {
-    use windows_sys::Win32::System::ProcessStatus::{GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS};
+    use windows_sys::Win32::System::ProcessStatus::{
+        GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS,
+    };
     use windows_sys::Win32::System::Threading::GetCurrentProcess;
     let mut c: PROCESS_MEMORY_COUNTERS = unsafe { std::mem::zeroed() };
     c.cb = std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32;

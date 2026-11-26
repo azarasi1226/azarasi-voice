@@ -69,7 +69,13 @@ impl Recording {
         };
         stream.play()?;
 
-        Ok(Self { _stream: stream, buffer, sample_rate, started, first_data })
+        Ok(Self {
+            _stream: stream,
+            buffer,
+            sample_rate,
+            started,
+            first_data,
+        })
     }
 
     /// 録音を止めて、16kHz モノラルの音声を返す。
@@ -77,7 +83,10 @@ impl Recording {
         let sample_rate = self.sample_rate;
         let buffer = self.buffer.clone();
         if let Some(first) = self.first_data.get() {
-            println!("[rec] 押してから音が入り始めるまで: {} ms", (*first - self.started).as_millis());
+            println!(
+                "[rec] 押してから音が入り始めるまで: {} ms",
+                (*first - self.started).as_millis()
+            );
         }
         drop(self); // ストリームを閉じる
         let samples = std::mem::take(&mut *buffer.lock().unwrap());
@@ -95,7 +104,12 @@ impl Recording {
 }
 
 /// 複数チャンネルを平均してモノラルにして貯める。
-fn push_mono<T: Copy>(buf: &Mutex<Vec<f32>>, data: &[T], channels: usize, to_f32: impl Fn(T) -> f32) {
+fn push_mono<T: Copy>(
+    buf: &Mutex<Vec<f32>>,
+    data: &[T],
+    channels: usize,
+    to_f32: impl Fn(T) -> f32,
+) {
     let mut buf = buf.lock().unwrap();
     for frame in data.chunks(channels) {
         let sum: f32 = frame.iter().map(|&s| to_f32(s)).sum();

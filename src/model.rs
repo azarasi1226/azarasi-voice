@@ -13,7 +13,8 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-const BASE_URL: &str = "https://github.com/azarasi1226/azarasi-voice/releases/download/model-parakeet-ja-int8-v1";
+const BASE_URL: &str =
+    "https://github.com/azarasi1226/azarasi-voice/releases/download/model-parakeet-ja-int8-v1";
 
 pub struct ModelFile {
     pub name: &'static str,
@@ -58,7 +59,11 @@ pub fn is_ready(dir: &Path) -> bool {
 
 /// モデルをダウンロードする。`on_progress(済んだバイト数, 合計)` で進み具合を伝える。
 /// `cancel` が立ったら途中でやめる。
-pub fn download(dir: &Path, cancel: &AtomicBool, mut on_progress: impl FnMut(u64, u64)) -> Result<()> {
+pub fn download(
+    dir: &Path,
+    cancel: &AtomicBool,
+    mut on_progress: impl FnMut(u64, u64),
+) -> Result<()> {
     std::fs::create_dir_all(dir)?;
     let total = total_size();
     let mut done_before = 0;
@@ -73,12 +78,21 @@ pub fn download(dir: &Path, cancel: &AtomicBool, mut on_progress: impl FnMut(u64
 
         let part = dir.join(format!("{}.part", file.name));
         let _ = std::fs::remove_file(&part);
-        let curl = Path::new(&std::env::var_os("SystemRoot").unwrap_or_else(|| "C:\\Windows".into()))
-            .join("System32")
-            .join("curl.exe");
+        let curl =
+            Path::new(&std::env::var_os("SystemRoot").unwrap_or_else(|| "C:\\Windows".into()))
+                .join("System32")
+                .join("curl.exe");
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         let mut child = Command::new(&curl)
-            .args(["--location", "--fail", "--silent", "--show-error", "--retry", "3", "--output"])
+            .args([
+                "--location",
+                "--fail",
+                "--silent",
+                "--show-error",
+                "--retry",
+                "3",
+                "--output",
+            ])
             .arg(&part)
             .arg(format!("{BASE_URL}/{}", file.name))
             .stdin(Stdio::null())
@@ -115,7 +129,10 @@ pub fn download(dir: &Path, cancel: &AtomicBool, mut on_progress: impl FnMut(u64
         let hash = sha256_file(&part)?;
         if hash != file.sha256 {
             let _ = std::fs::remove_file(&part);
-            bail!("{} の中身が一致しない（壊れているか、別のファイル）", file.name);
+            bail!(
+                "{} の中身が一致しない（壊れているか、別のファイル）",
+                file.name
+            );
         }
         std::fs::rename(&part, &dest)?;
         done_before += file.size;
@@ -135,5 +152,9 @@ fn sha256_file(path: &Path) -> Result<String> {
         }
         hasher.update(&buf[..n]);
     }
-    Ok(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect())
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect())
 }

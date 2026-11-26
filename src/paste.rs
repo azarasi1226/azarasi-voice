@@ -16,7 +16,11 @@ pub fn paste(text: &str) -> Result<()> {
 
     let mut cb = arboard::Clipboard::new()?;
     let previous_text = cb.get_text().ok();
-    let previous_image = if previous_text.is_none() { cb.get_image().ok() } else { None };
+    let previous_image = if previous_text.is_none() {
+        cb.get_image().ok()
+    } else {
+        None
+    };
 
     cb.set_text(text)?;
     send_ctrl_v();
@@ -35,7 +39,9 @@ fn wait_modifiers_released(timeout: Duration) {
     let start = Instant::now();
     let held = |vk: VIRTUAL_KEY| unsafe { GetAsyncKeyState(vk as i32) } as u16 & 0x8000 != 0;
     while start.elapsed() < timeout
-        && [VK_LWIN, VK_RWIN, VK_LCONTROL, VK_RCONTROL].into_iter().any(held)
+        && [VK_LWIN, VK_RWIN, VK_LCONTROL, VK_RCONTROL]
+            .into_iter()
+            .any(held)
     {
         sleep(Duration::from_millis(10));
     }
@@ -45,7 +51,13 @@ fn send_ctrl_v() {
     let key = |vk, flags| INPUT {
         r#type: INPUT_KEYBOARD,
         Anonymous: INPUT_0 {
-            ki: KEYBDINPUT { wVk: vk, wScan: 0, dwFlags: flags, time: 0, dwExtraInfo: 0 },
+            ki: KEYBDINPUT {
+                wVk: vk,
+                wScan: 0,
+                dwFlags: flags,
+                time: 0,
+                dwExtraInfo: 0,
+            },
         },
     };
     let inputs = [
@@ -54,5 +66,11 @@ fn send_ctrl_v() {
         key(VK_V, KEYEVENTF_KEYUP),
         key(VK_CONTROL, KEYEVENTF_KEYUP),
     ];
-    unsafe { SendInput(inputs.len() as u32, inputs.as_ptr(), size_of::<INPUT>() as i32) };
+    unsafe {
+        SendInput(
+            inputs.len() as u32,
+            inputs.as_ptr(),
+            size_of::<INPUT>() as i32,
+        )
+    };
 }

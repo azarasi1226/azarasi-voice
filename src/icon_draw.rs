@@ -103,8 +103,12 @@ pub fn render_icon(size: u32, bg: [u8; 3]) -> Vec<u8> {
             paint(DARK, cover(sd_ellipse(p, nose_c, nose.0, nose.1)));
             // 口（ω）
             if !small {
-                let mouth = sd_lower_arc(p, (0.465, 0.675), 0.035, stroke)
-                    .min(sd_lower_arc(p, (0.535, 0.675), 0.035, stroke));
+                let mouth = sd_lower_arc(p, (0.465, 0.675), 0.035, stroke).min(sd_lower_arc(
+                    p,
+                    (0.535, 0.675),
+                    0.035,
+                    stroke,
+                ));
                 paint(DARK, cover(mouth));
             }
             // ひげ（小さいサイズではノイズになるので描かない）

@@ -45,12 +45,15 @@ impl Default for Config {
 
 impl Config {
     pub fn unload_after(&self) -> Option<Duration> {
-        (self.unload_after_minutes > 0).then(|| Duration::from_secs(self.unload_after_minutes as u64 * 60))
+        (self.unload_after_minutes > 0)
+            .then(|| Duration::from_secs(self.unload_after_minutes as u64 * 60))
     }
 
     /// 設定ファイルを読む。無ければ既定値。
     pub fn load() -> Self {
-        let Ok(path) = path() else { return Self::default() };
+        let Ok(path) = path() else {
+            return Self::default();
+        };
         match std::fs::read_to_string(&path) {
             Ok(s) => toml::from_str(&s).unwrap_or_else(|e| {
                 eprintln!("[config] 読めないので既定値を使う: {e}");

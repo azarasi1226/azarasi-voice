@@ -58,11 +58,13 @@ pub fn run() -> Result<()> {
     let dir = model::default_dir()?;
     let ui = SetupWindow::new()?;
     const ICON_SIZE: u32 = 64;
-    ui.set_app_icon(slint::Image::from_rgba8(slint::SharedPixelBuffer::clone_from_slice(
-        &icon_draw::render_icon(ICON_SIZE, icon_draw::COLOR_IDLE),
-        ICON_SIZE,
-        ICON_SIZE,
-    )));
+    ui.set_app_icon(slint::Image::from_rgba8(
+        slint::SharedPixelBuffer::clone_from_slice(
+            &icon_draw::render_icon(ICON_SIZE, icon_draw::COLOR_IDLE),
+            ICON_SIZE,
+            ICON_SIZE,
+        ),
+    ));
 
     let cancel = Arc::new(AtomicBool::new(false));
     let start = {
@@ -94,7 +96,10 @@ pub fn run() -> Result<()> {
                     }
                     Err(e) => {
                         ui.set_failed(true);
-                        ui.set_detail(format!("{e}\nネットワークを確認して「再試行」を押してください。").into());
+                        ui.set_detail(
+                            format!("{e}\nネットワークを確認して「再試行」を押してください。")
+                                .into(),
+                        );
                     }
                 });
             });

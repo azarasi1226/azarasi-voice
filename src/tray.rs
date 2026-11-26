@@ -52,7 +52,12 @@ pub fn run() -> Result<()> {
         .build()?;
 
     TrayIconEvent::set_event_handler(Some(|e| {
-        if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = e {
+        if let TrayIconEvent::Click {
+            button: MouseButton::Left,
+            button_state: MouseButtonState::Up,
+            ..
+        } = e
+        {
             open_settings();
         }
     }));
@@ -88,7 +93,8 @@ pub fn run() -> Result<()> {
 
 /// 設定画面を別プロセスで開く。
 fn open_settings() {
-    let result = std::env::current_exe().and_then(|exe| std::process::Command::new(exe).arg("--settings").spawn());
+    let result = std::env::current_exe()
+        .and_then(|exe| std::process::Command::new(exe).arg("--settings").spawn());
     if let Err(e) = result {
         eprintln!("[tray] 設定画面を開けない: {e}");
     }
@@ -97,5 +103,9 @@ fn open_settings() {
 /// トレイ用のアイコン。高 DPI でもぼやけないよう 32px で作り、Windows に縮小させる。
 fn make_icon(color: [u8; 3]) -> Result<Icon> {
     const SIZE: u32 = 32;
-    Ok(Icon::from_rgba(icon_draw::render_icon(SIZE, color), SIZE, SIZE)?)
+    Ok(Icon::from_rgba(
+        icon_draw::render_icon(SIZE, color),
+        SIZE,
+        SIZE,
+    )?)
 }

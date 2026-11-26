@@ -152,7 +152,9 @@ pub fn run() -> Result<()> {
             formatting: index_to_formatting(ui.get_formatting_index()),
             anthropic_api_key: ui.get_api_key().trim().to_string(),
         };
-        let result = new.save().and_then(|()| autostart::set_enabled(ui.get_autostart()));
+        let result = new
+            .save()
+            .and_then(|()| autostart::set_enabled(ui.get_autostart()));
         match result {
             Ok(()) => ui.set_status("保存した".into()),
             Err(e) => ui.set_status(format!("保存に失敗: {e}").into()),

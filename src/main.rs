@@ -87,14 +87,20 @@ fn main() -> anyhow::Result<()> {
 
     let model_dir = match model_dir {
         Some(dir) => {
-            anyhow::ensure!(dir.join("model.int8.onnx").exists(), "モデルが見つからない: {}", dir.display());
+            anyhow::ensure!(
+                dir.join("model.int8.onnx").exists(),
+                "モデルが見つからない: {}",
+                dir.display()
+            );
             dir
         }
         None => {
             let dir = model::default_dir()?;
             if !model::is_ready(&dir) {
                 // 初回：ダウンロード画面を別プロセスで出して、終わるのを待つ
-                std::process::Command::new(std::env::current_exe()?).arg("--setup").status()?;
+                std::process::Command::new(std::env::current_exe()?)
+                    .arg("--setup")
+                    .status()?;
                 if !model::is_ready(&dir) {
                     return Ok(()); // キャンセルされた
                 }
@@ -135,7 +141,10 @@ fn main() -> anyhow::Result<()> {
                         config_mtime = mtime;
                         let new = Config::load();
                         if new != config {
-                            println!("[config] 設定を読み直した: threads={}, unload_after_minutes={}", new.threads, new.unload_after_minutes);
+                            println!(
+                                "[config] 設定を読み直した: threads={}, unload_after_minutes={}",
+                                new.threads, new.unload_after_minutes
+                            );
                             config = new;
                             let _ = job_tx.send(asr::Job::Reconfigure {
                                 threads: config.threads as i32,
@@ -164,13 +173,18 @@ fn main() -> anyhow::Result<()> {
                     if sec < 0.3 {
                         continue; // 押し間違いとみなす
                     }
-                    let _ = job_tx.send(asr::Job::Transcribe { samples, sample_rate });
+                    let _ = job_tx.send(asr::Job::Transcribe {
+                        samples,
+                        sample_rate,
+                    });
                 }
             }
         }
     });
 
     hotkey::install(key_tx)?;
-    println!("azarasi-voice 起動。Win + 左 Ctrl を押している間だけ録音する。終了はトレイのメニューから。");
+    println!(
+        "azarasi-voice 起動。Win + 左 Ctrl を押している間だけ録音する。終了はトレイのメニューから。"
+    );
     tray::run()
 }

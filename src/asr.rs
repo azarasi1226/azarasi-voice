@@ -17,7 +17,10 @@ pub struct AsrConfig {
 
 pub enum Job {
     /// 設定が変わった。スレッド数が変わったらモデルを読み直す。
-    Reconfigure { threads: i32, unload_after: Option<Duration> },
+    Reconfigure {
+        threads: i32,
+        unload_after: Option<Duration>,
+    },
     /// 録音開始。まだならモデルを読み込んでおく。
     Prepare,
     /// 録音した音声を文字にして、結果を `on_text` に渡す（認識できなければ空文字）。
@@ -44,7 +47,11 @@ pub fn run(mut config: AsrConfig, jobs: Receiver<Job>, mut on_text: impl FnMut(S
             },
         };
 
-        if let Job::Reconfigure { threads, unload_after } = job {
+        if let Job::Reconfigure {
+            threads,
+            unload_after,
+        } = job
+        {
             if threads != config.threads {
                 recognizer = None; // 次の録音開始で新しいスレッド数で読み込む
             }
@@ -63,7 +70,11 @@ pub fn run(mut config: AsrConfig, jobs: Receiver<Job>, mut on_text: impl FnMut(S
             continue;
         };
 
-        if let Job::Transcribe { samples, sample_rate } = job {
+        if let Job::Transcribe {
+            samples,
+            sample_rate,
+        } = job
+        {
             let t = Instant::now();
             let stream = rec.create_stream();
             stream.accept_waveform(sample_rate as i32, &samples);
