@@ -87,7 +87,7 @@ Free code signing provided by [SignPath.io](https://about.signpath.io/), certifi
 [ドキュメントサイト](https://azarasi1226.github.io/azarasi-voice/)にまとめている（リポジトリの [`docs/`](docs/) にある HTML）。
 
 - [全体の構成](https://azarasi1226.github.io/azarasi-voice/overview.html)、[録音から貼り付けまで](https://azarasi1226.github.io/azarasi-voice/recording.html)、[音声認識モデル](https://azarasi1226.github.io/azarasi-voice/model.html)、[設定と画面](https://azarasi1226.github.io/azarasi-voice/settings.html)
-- [開発環境](https://azarasi1226.github.io/azarasi-voice/development.html)、[リリースと配布](https://azarasi1226.github.io/azarasi-voice/release.html)
+- [開発環境の構築](https://azarasi1226.github.io/azarasi-voice/development.html)、[リリースと配布](https://azarasi1226.github.io/azarasi-voice/release.html)
 
 ## ライセンス
 
