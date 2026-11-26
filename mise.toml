@@ -1,0 +1,14 @@
+[tools]
+rust = { version = "1.100.0", profile = "minimal", components = "clippy,rustfmt", targets = "x86_64-pc-windows-msvc" }
+"cargo:cargo-xwin" = "0.24.1"
+
+[env]
+# Anthropic API キーなどは .env に書く（.gitignore 済み）
+_.file = ".env"
+
+[tasks.build]
+description = "Windows 用 exe をビルド"
+run = "cargo xwin build --release --target x86_64-pc-windows-msvc"
+
+[tasks.check]
+run = "cargo xwin check --target x86_64-pc-windows-msvc"
