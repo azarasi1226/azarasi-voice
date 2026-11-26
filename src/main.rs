@@ -30,6 +30,8 @@ mod settings;
 #[cfg(windows)]
 mod setup;
 #[cfg(windows)]
+mod sound;
+#[cfg(windows)]
 mod tray;
 
 #[cfg(not(windows))]
@@ -140,7 +142,6 @@ fn main() -> anyhow::Result<()> {
     let (job_tx, job_rx) = mpsc::channel();
     let asr_config = asr::AsrConfig {
         model_dir: model_dir.clone(),
-        threads: config.threads as i32,
         unload_after: config.unload_after(),
     };
     std::thread::spawn(move || {
@@ -172,13 +173,9 @@ fn main() -> anyhow::Result<()> {
                         config_mtime = mtime;
                         let new = Config::load();
                         if new != config {
-                            println!(
-                                "[config] 設定を読み直した: threads={}, unload_after_minutes={}",
-                                new.threads, new.unload_after_minutes
-                            );
+                            println!("[config] 設定を読み直した: {new:?}");
                             config = new;
                             let _ = job_tx.send(asr::Job::Reconfigure {
-                                threads: config.threads as i32,
                                 unload_after: config.unload_after(),
                             });
                         }
@@ -189,6 +186,9 @@ fn main() -> anyhow::Result<()> {
                         Ok(r) => {
                             println!("[rec] 録音開始");
                             tray::notify(tray::Status::Recording);
+                            if config.sound {
+                                sound::play_start();
+                            }
                             recording = Some(r);
                         }
                         Err(e) => eprintln!("[rec] 録音を開始できない: {e}"),
@@ -197,6 +197,9 @@ fn main() -> anyhow::Result<()> {
                 HotkeyEvent::Released => {
                     let Some(r) = recording.take() else { continue };
                     tray::notify(tray::Status::Idle);
+                    if config.sound {
+                        sound::play_stop();
+                    }
                     let samples = r.finish();
                     let sample_rate = audio::SAMPLE_RATE;
                     let sec = samples.len() as f32 / sample_rate as f32;

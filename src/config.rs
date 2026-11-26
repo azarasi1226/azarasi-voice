@@ -10,17 +10,17 @@ use std::time::{Duration, SystemTime};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
-    /// 音声認識に使う CPU スレッド数
-    pub threads: u32,
     /// 最後に使ってからモデルを外すまでの分数。0 なら外さない。
     pub unload_after_minutes: u32,
+    /// 録音の開始・終了で効果音を鳴らす
+    pub sound: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            threads: 4,
             unload_after_minutes: 5,
+            sound: true,
         }
     }
 }

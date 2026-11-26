@@ -33,6 +33,7 @@ tray-icon = "0.27"
 # Windows API。使う機能だけを有効にしている
 windows-sys = { version = "0.61", features = [
   "Win32_Foundation",
+  "Win32_Media_Audio",                 # 録音の開始・終了の効果音（PlaySound）
   "Win32_Security",                    # CreateMutexW（二重起動防止）の引数の型
   "Win32_System_Console",              # --console でログ用のコンソールを開く
   "Win32_System_Registry",             # 自動起動の登録（HKCU\...\Run）

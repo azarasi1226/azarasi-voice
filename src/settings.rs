@@ -19,7 +19,7 @@ slint::slint! {
         default-font-family: "Yu Gothic UI";
         default-font-size: 14px;
 
-        in-out property <int> threads;
+        in-out property <bool> sound;
         in-out property <int> unload-minutes;
         in-out property <bool> autostart;
         in property <image> app-icon;
@@ -45,10 +45,6 @@ slint::slint! {
                             GridLayout {
                                 spacing: 8px;
                                 Row {
-                                    Text { text: "CPU スレッド数"; vertical-alignment: center; }
-                                    SpinBox { minimum: 1; maximum: 16; value <=> root.threads; }
-                                }
-                                Row {
                                     Text { text: "モデルを外すまで（分、0 で外さない）"; vertical-alignment: center; }
                                     SpinBox { minimum: 0; maximum: 120; value <=> root.unload-minutes; }
                                 }
@@ -56,8 +52,12 @@ slint::slint! {
                         }
 
                         GroupBox {
-                            title: "起動";
-                            CheckBox { text: "Windows の起動時に自動で起動する"; checked <=> root.autostart; }
+                            title: "その他";
+                            VerticalLayout {
+                                spacing: 4px;
+                                CheckBox { text: "Windows の起動時に自動で起動する"; checked <=> root.autostart; }
+                                CheckBox { text: "録音の開始・終了で音を鳴らす"; checked <=> root.sound; }
+                            }
                         }
 
                         Text {
@@ -90,7 +90,7 @@ slint::slint! {
 pub fn run() -> Result<()> {
     let config = Config::load();
     let ui = SettingsWindow::new()?;
-    ui.set_threads(config.threads as i32);
+    ui.set_sound(config.sound);
     ui.set_unload_minutes(config.unload_after_minutes as i32);
     ui.set_autostart(autostart::is_enabled());
     const ICON_SIZE: u32 = 64;
@@ -105,7 +105,7 @@ pub fn run() -> Result<()> {
     ui.on_save(move || {
         let Some(ui) = weak.upgrade() else { return };
         let new = Config {
-            threads: ui.get_threads().max(1) as u32,
+            sound: ui.get_sound(),
             unload_after_minutes: ui.get_unload_minutes().max(0) as u32,
         };
         let result = new

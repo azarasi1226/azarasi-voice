@@ -10,17 +10,13 @@ use std::time::{Duration, Instant};
 
 pub struct AsrConfig {
     pub model_dir: PathBuf,
-    pub threads: i32,
     /// None ならモデルを外さない。
     pub unload_after: Option<Duration>,
 }
 
 pub enum Job {
-    /// 設定が変わった。スレッド数が変わったらモデルを読み直す。
-    Reconfigure {
-        threads: i32,
-        unload_after: Option<Duration>,
-    },
+    /// 設定が変わった。
+    Reconfigure { unload_after: Option<Duration> },
     /// 録音開始。まだならモデルを読み込んでおく。
     Prepare,
     /// モデルを外す（モデルのファイルを入れ替える前に使う）。
@@ -49,15 +45,7 @@ pub fn run(mut config: AsrConfig, jobs: Receiver<Job>, mut on_text: impl FnMut(S
             },
         };
 
-        if let Job::Reconfigure {
-            threads,
-            unload_after,
-        } = job
-        {
-            if threads != config.threads {
-                recognizer = None; // 次の録音開始で新しいスレッド数で読み込む
-            }
-            config.threads = threads;
+        if let Job::Reconfigure { unload_after } = job {
             config.unload_after = unload_after;
             continue;
         }
@@ -96,6 +84,13 @@ pub fn run(mut config: AsrConfig, jobs: Receiver<Job>, mut on_text: impl FnMut(S
     }
 }
 
+/// 音声認識に使うスレッド数。論理コア数の 1/4 を 1〜4 に収める。
+/// ゲームなどの CPU を奪いにくくするため控えめにし、4 より増やしても速くならないので上限を 4 にしている。
+fn auto_threads() -> i32 {
+    let cores = std::thread::available_parallelism().map_or(4, |n| n.get());
+    (cores / 4).clamp(1, 4) as i32
+}
+
 fn load(config: &AsrConfig) -> Option<OfflineRecognizer> {
     let dir = &config.model_dir;
     let mut rc = OfflineRecognizerConfig::default();
@@ -103,12 +98,16 @@ fn load(config: &AsrConfig) -> Option<OfflineRecognizer> {
         model: Some(dir.join("model.int8.onnx").to_string_lossy().into_owned()),
     };
     rc.model_config.tokens = Some(dir.join("tokens.txt").to_string_lossy().into_owned());
-    rc.model_config.num_threads = config.threads;
+    let threads = auto_threads();
+    rc.model_config.num_threads = threads;
 
     let t = Instant::now();
     let rec = OfflineRecognizer::create(&rc);
     match &rec {
-        Some(_) => println!("[asr] モデル読み込み: {:.2} 秒", t.elapsed().as_secs_f64()),
+        Some(_) => println!(
+            "[asr] モデル読み込み: {:.2} 秒（{threads} スレッド）",
+            t.elapsed().as_secs_f64()
+        ),
         None => eprintln!("[asr] モデルを読み込めない: {}", dir.display()),
     }
     rec
