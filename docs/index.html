@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1b2f4f">
+  <meta name="description" content="azarasi-voice の仕組みと開発のドキュメント。">
+  <title>azarasi-voice | ドキュメント</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <h1>azarasi-voice ドキュメント</h1>
+    <p>Windows 用のローカル音声入力ツール azarasi-voice の、仕組みと開発のドキュメント。使い方とインストールは <a href="https://github.com/azarasi1226/azarasi-voice" style="color:#fff">README</a> を参照。</p>
+  </header>
+  <main class="main">
+    <h2 class="section-title">仕組み</h2>
+    <div class="cards">
+      <a class="card" href="overview.html">
+        <h3>全体の構成</h3>
+        <p>プロセスとスレッドの役割、二重起動の防止</p>
+      </a>
+      <a class="card" href="recording.html">
+        <h3>録音から貼り付けまで</h3>
+        <p>ホットキー、録音、貼り付け、効果音</p>
+      </a>
+      <a class="card" href="model.html">
+        <h3>音声認識モデル</h3>
+        <p>配布、ダウンロード、確認、メモリからの解放</p>
+      </a>
+      <a class="card" href="settings.html">
+        <h3>設定と画面</h3>
+        <p>設定ファイル、自動起動、画面、アイコン</p>
+      </a>
+    </div>
+    <h2 class="section-title">開発</h2>
+    <div class="cards">
+      <a class="card" href="development.html">
+        <h3>開発環境</h3>
+        <p>WSL からのビルド、動作確認のしかた</p>
+      </a>
+      <a class="card" href="release.html">
+        <h3>リリースと配布</h3>
+        <p>CI、リリースの手順、インストーラー、モデルの差し替え</p>
+      </a>
+    </div>
+  </main>
+  <footer class="footer">ドキュメントは<a href="https://github.com/azarasi1226/azarasi-voice">このリポジトリ</a>の <code>docs/</code> で管理しています。</footer>
+</body>
+</html>

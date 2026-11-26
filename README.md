@@ -2,11 +2,28 @@
 
 Windows 用の音声入力ツール。ホットキーを押している間だけ録音し、ローカルの音声認識で文字にして、開いているウィンドウに貼り付ける。
 
+[📚 ドキュメントサイト](https://azarasi1226.github.io/azarasi-voice/)（仕組みと開発）
+
 - **Win + 左 Ctrl を押している間だけ録音**し、離すと文字にして貼り付ける
 - 音声認識はすべて PC の中で行う（NVIDIA の [Parakeet 日本語版](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja)）。音声を外部に送らない
 - **GPU / VRAM を使わない**。ゲームと並行して使っても邪魔をしない
 - 待機中は数十 MB。話したときだけモデルを読み込み、しばらく使わなければメモリから外す
 - タスクトレイに常駐し、録音中はアイコンが赤くなる
+
+## なぜ作ったか
+
+音声入力ソフトを探すと、だいたい次のどちらかになる。
+
+- **精度の高いものは有料が多い**。クラウドで処理するものは、音声を外部のサーバーに送ることにもなる
+- **無料でローカルで動くものは、GPU のメモリ（VRAM）を大量に使うものが多い**。Whisper large のような大きなモデルを GPU に載せるため、数 GB の VRAM を使い続ける。ゲームをしながら使うと、ゲームと VRAM を取り合ってしまう
+
+azarasi-voice は、無料で、ローカルで、しかもゲームの邪魔をしない音声入力を目指して作った。
+
+- **日本語専用のモデル**：NVIDIA が日本語だけで学習させた音声認識モデル [Parakeet 日本語版](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja) を使う。多くの言語を 1 つでこなすモデルと違い、日本語に特化している
+- **CPU だけで速い**：モデルを軽量化（int8 量子化）して CPU で動かす。13 秒の音声を約 0.3 秒で文字にする（下の計測例を参照）。話し終わってから貼り付けまで、ほとんど待たない
+- **GPU を使わない**：VRAM は 0 MB。GPU はゲームに全部使える
+- **普段は軽い**：待機中のメモリは 30〜40 MB ほど。モデル（約 700 MB）はホットキーを押した瞬間に読み込み始め（話している間に終わる）、しばらく使わなければメモリから解放する
+- **無料・オープンソース**：音声も文字も外部に送らない
 
 ## インストール
 
@@ -25,9 +42,9 @@ Windows 用の音声入力ツール。ホットキーを押している間だけ
 - 貼り付けはクリップボード経由。直前にコピーしていた文字や画像は、貼り付けたあとに元に戻す
 - トレイのアイコンを左クリックで設定画面、右クリックでメニュー（設定を開く / 終了）
 - 録音の開始と終了で短い効果音が鳴る（設定画面でオフにできる）
-  - ワイヤレスヘッドセットなどは、無音が続くと省電力のために音声を止め、鳴らし始めの音が聞こえないことがある。そのため、しばらく音を鳴らしていなかったときは、聞こえない小さな音を 0.4 秒流して機器を起こしてから鳴らす（その分だけ遅れて聞こえる）
+  - ワイヤレスヘッドセットなどでは、しばらく音を鳴らしていなかったときだけ、開始の音が 0.4 秒ほど遅れて聞こえる（機器を省電力の状態から起こすため）
 - 設定画面でできること
-  - モデルをメモリから外すまでの時間
+  - 音声認識モデルをメモリから解放するまでの時間
   - Windows の起動時に自動で起動する
   - 録音の開始・終了の効果音のオン・オフ
 - 音声認識に使う CPU スレッド数は自動で決まる（論理コア数の 1/4、1〜4）。ゲームなどの CPU を奪いにくいよう控えめにしている
@@ -56,18 +73,7 @@ Free code signing provided by [SignPath.io](https://about.signpath.io/), certifi
 
 署名する exe は、このリポジトリのソースから GitHub Actions で自動ビルドしたものだけ。
 
-## 仕組み
-
-| 項目 | 内容 |
-|---|---|
-| 音声認識 | Parakeet 日本語版（`parakeet-tdt_ctc-0.6b-ja` の int8 ONNX 変換版）を sherpa-onnx で CPU 実行 |
-| モデル | `%LOCALAPPDATA%\azarasi-voice\model`。初回起動時に [Releases](https://github.com/azarasi1226/azarasi-voice/releases/tag/model-parakeet-ja-int8-v1) からダウンロードし、SHA-256 で中身を確認する |
-| 設定 | `%APPDATA%\azarasi-voice\config.toml`。設定画面で保存すると、次にホットキーを押したときに反映される |
-| 自動起動 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` に登録・解除する |
-| インストーラー | [Inno Setup](https://jrsoftware.org/isinfo.php)（`installer/azarasi-voice.iss`）。CI の Windows ランナーで作る |
-| 画面 | 設定画面とダウンロード画面は別プロセスで、閉じるとプロセスごと終了する。Slint のソフトウェアレンダラーで描画するので GPU は使わない |
-
-### 計測例（Ryzen 9 9900X3D、4 スレッド）
+## 計測例（Ryzen 9 9900X3D、4 スレッド）
 
 | 項目 | 結果 |
 |---|---|
@@ -76,28 +82,12 @@ Free code signing provided by [SignPath.io](https://about.signpath.io/), certifi
 | メモリ（モデル読み込み中） | 約 700〜800 MB |
 | メモリ（モデル解放後） | 約 30〜40 MB |
 
-## 開発
+## 仕組みと開発
 
-WSL から Windows 用の exe をクロスコンパイルする（`cargo-xwin`）。Rust と cargo-xwin のバージョンは `mise.toml` で管理している。clang / lld は mise では入れられないので apt で入れる。
+[ドキュメントサイト](https://azarasi1226.github.io/azarasi-voice/)にまとめている（リポジトリの [`docs/`](docs/) にある HTML）。
 
-```sh
-# 1. clang / lld / llvm-rc（cargo-xwin が Windows 向けのリンクと C/C++ のビルドに、build.rs がアイコンの埋め込みに使う）
-sudo apt install clang lld llvm
-
-# 2. Rust・Windows ターゲット・cargo-xwin
-mise install
-
-# 3. ビルド（初回は MSVC CRT と Windows SDK のダウンロードで数分かかる）
-mise run build
-
-# 4. Windows のダウンロードフォルダの azarasi-voice-dev に exe を配置（起動中でも置き換えられる）
-mise run deploy
-```
-
-- `mise run fmt` で整形、`mise run lint` で整形のずれと clippy の警告をチェックする。CI でも同じチェックを行い、警告が 1 つでもあると失敗する
-
-- ログを見たいときは `azarasi-voice.exe --console` で起動する
-- 初回セットアップ画面の動作確認は、環境変数 `AZARASI_VOICE_MODEL_DIR` に空のフォルダを指定して `azarasi-voice.exe --setup` を起動する
+- [全体の構成](https://azarasi1226.github.io/azarasi-voice/overview.html)、[録音から貼り付けまで](https://azarasi1226.github.io/azarasi-voice/recording.html)、[音声認識モデル](https://azarasi1226.github.io/azarasi-voice/model.html)、[設定と画面](https://azarasi1226.github.io/azarasi-voice/settings.html)
+- [開発環境](https://azarasi1226.github.io/azarasi-voice/development.html)、[リリースと配布](https://azarasi1226.github.io/azarasi-voice/release.html)
 
 ## ライセンス
 

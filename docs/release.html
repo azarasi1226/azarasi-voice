@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1b2f4f">
+  <meta name="description" content="CI、リリースの手順、インストーラー、モデルの差し替え。">
+  <title>リリースと配布 | azarasi-voice</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <h1>リリースと配布</h1>
+    <p>CI、リリースの手順、インストーラー、モデルの差し替え。</p>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="ドキュメント">
+      <h2>ドキュメント</h2>
+      <ul>
+        <li><a href="index.html">ドキュメントトップ</a></li>
+        <li class="nav-group">仕組み</li>
+        <li><a href="overview.html">全体の構成</a></li>
+        <li><a href="recording.html">録音から貼り付けまで</a></li>
+        <li><a href="model.html">音声認識モデル</a></li>
+        <li><a href="settings.html">設定と画面</a></li>
+        <li class="nav-group">開発</li>
+        <li><a href="development.html">開発環境</a></li>
+        <li><a href="release.html" aria-current="page">リリースと配布</a></li>
+        <li class="sidebar-external"><a href="https://github.com/azarasi1226/azarasi-voice" target="_blank" rel="noopener">GitHub リポジトリ（README） ↗</a></li>
+      </ul>
+    </nav>
+    <main class="content">
+      <section aria-labelledby="ci">
+        <h2 id="ci">CI（<code>.github/workflows/build.yml</code>）</h2>
+        <table>
+          <thead><tr><th>ジョブ</th><th>ランナー</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><th>build</th><td>Ubuntu</td><td><code>mise run lint</code> と <code>mise run build</code>。exe と、<code>build.rs</code> が作った <code>.ico</code> を成果物にする</td></tr>
+            <tr><th>installer</th><td>Windows</td><td>Inno Setup でインストーラーを作る（Inno Setup が Windows 専用のため）</td></tr>
+            <tr><th>release</th><td>Ubuntu</td><td><code>v*</code> のタグのときだけ。インストーラーを GitHub Release に添付する</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section aria-labelledby="release">
+        <h2 id="release">リリースの手順</h2>
+        <ol>
+          <li><code>Cargo.toml</code> の <code>version</code> を上げてコミットする</li>
+          <li>同じバージョンのタグを付けて push する</li>
+        </ol>
+<pre><code>git tag -a v0.3.0 -m "azarasi-voice v0.3.0"
+git push origin main v0.3.0</code></pre>
+        <p>CI がインストーラー（<code>azarasi-voice-setup-&lt;バージョン&gt;.exe</code>）を作り、リリースノートを自動で生成して GitHub Release を作る。</p>
+        <p>リリースにはインストーラーだけを置く。exe 単体は置かない（インストール先が固定されるので、自動起動の登録が exe の移動でずれることがない）。</p>
+      </section>
+
+      <section aria-labelledby="installer">
+        <h2 id="installer">インストーラー（<code>installer/azarasi-voice.iss</code>）</h2>
+        <ul>
+          <li>管理者権限なしで <code>%LOCALAPPDATA%\Programs\azarasi-voice</code> にインストールし、スタートメニューに登録する</li>
+          <li>インストール時に「Windows の起動時に自動で起動する」を選べる</li>
+          <li><code>AppId</code> を固定しているので、新しいバージョンは上書きでアップデートされる。設定とモデルはそのまま残る</li>
+          <li>アンインストール時に、自動起動の登録・設定（<code>%APPDATA%\azarasi-voice</code>）・モデル（<code>%LOCALAPPDATA%\azarasi-voice</code>）も消す</li>
+          <li>インストール・アンインストールの前に、azarasi-voice が起動中なら終了を促す（<code>AppMutex</code>）</li>
+          <li>モデル（約 655 MB）はインストーラーに入れず、初回起動時にアプリがダウンロードする。アプリの更新のたびにモデルを落とし直さずに済む</li>
+        </ul>
+        <p>手元で作るときは、Windows に <a href="https://jrsoftware.org/isinfo.php">Inno Setup 6</a> を入れて実行する。</p>
+<pre><code>ISCC /DAppVersion=0.0.0 /DExePath=&lt;exe のパス&gt; /DIconPath=&lt;ico のパス&gt; installer\azarasi-voice.iss</code></pre>
+      </section>
+
+      <section aria-labelledby="model">
+        <h2 id="model">モデルを差し替えるとき</h2>
+        <ol>
+          <li>新しいモデルのファイルを、新しいタグ名の Release に添付する。アプリの「最新リリース」にならないよう <code>--latest=false</code> を付ける</li>
+          <li><code>src/model.rs</code> の <code>BASE_URL</code> と <code>FILES</code>（ファイル名・大きさ・SHA-256）を書き換える</li>
+          <li>古い Release は、古いバージョンのアプリが使い続けるので消さない</li>
+        </ol>
+<pre><code>gh release create model-&lt;名前&gt;-v&lt;番号&gt; model.int8.onnx tokens.txt --latest=false --title "..." --notes "..."</code></pre>
+      </section>
+
+      <section aria-labelledby="signing">
+        <h2 id="signing">コード署名</h2>
+        <p>スマート アプリ コントロールがオンの PC でも起動できるよう、<a href="https://signpath.org/">SignPath Foundation</a> のオープンソース向けの無料署名を申請する予定。署名するのは、このリポジトリのソースから GitHub Actions でビルドしたものだけ。</p>
+      </section>
+    </main>
+  </div>
+  <footer class="site-footer">ドキュメントは<a href="https://github.com/azarasi1226/azarasi-voice">このリポジトリ</a>の <code>docs/</code> で管理しています。</footer>
+</body>
+</html>
