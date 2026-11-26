@@ -46,7 +46,7 @@ Windows 用の音声入力ツール。ホットキーを押している間だけ
 
 ### 注意：スマート アプリ コントロール
 
-Windows のスマート アプリ コントロールがオンだと、署名のない自作 exe は「Device Guard ポリシーによってブロック」されて起動できない。個人では署名の手段が現実的でないため、オフにして使う。
+Windows のスマート アプリ コントロールがオンだと、署名のない exe は「Device Guard ポリシーによってブロック」されて起動できない。[SignPath Foundation](https://signpath.org/) のオープンソース向け無料署名を申請する予定。それまではオフにして使う。
 
 ## 開発環境のセットアップ（WSL）
 
@@ -72,3 +72,13 @@ mkdir -p models && cd models
 curl -LO https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt_ctc-0.6b-ja-35000-int8.tar.bz2
 tar xjf sherpa-onnx-nemo-parakeet-tdt_ctc-0.6b-ja-35000-int8.tar.bz2   # bzip2 が無ければ sudo apt install bzip2
 ```
+
+## ライセンス
+
+[GPL-3.0](LICENSE)
+
+使っている主なもの：
+
+- [Slint](https://slint.dev/)（GPL-3.0 で利用）
+- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)（Apache-2.0）
+- 音声認識モデル [nvidia/parakeet-tdt_ctc-0.6b-ja](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja)（CC-BY-4.0、NVIDIA）。リポジトリには含めず、別途ダウンロードする

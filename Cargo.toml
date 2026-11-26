@@ -2,6 +2,8 @@
 name = "azarasi-voice"
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0-only"
+repository = "https://github.com/azarasi1226/azarasi-voice"
 
 [dependencies]
 sherpa-onnx = "2.0.3"
