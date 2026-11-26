@@ -23,6 +23,8 @@ pub enum Job {
     },
     /// 録音開始。まだならモデルを読み込んでおく。
     Prepare,
+    /// モデルを外す（モデルのファイルを入れ替える前に使う）。
+    Unload,
     /// 録音した音声を文字にして、結果を `on_text` に渡す（認識できなければ空文字）。
     Transcribe { samples: Vec<f32>, sample_rate: u32 },
 }
@@ -57,6 +59,10 @@ pub fn run(mut config: AsrConfig, jobs: Receiver<Job>, mut on_text: impl FnMut(S
             }
             config.threads = threads;
             config.unload_after = unload_after;
+            continue;
+        }
+        if let Job::Unload = job {
+            recognizer = None;
             continue;
         }
 

@@ -141,6 +141,34 @@ pub fn download(
     Ok(())
 }
 
+/// 揃っているファイルのハッシュを確かめ、中身が壊れているファイルを返す。
+pub fn find_corrupt(dir: &Path) -> Result<Vec<&'static ModelFile>> {
+    let mut bad = Vec::new();
+    for file in FILES {
+        if sha256_file(&dir.join(file.name))? != file.sha256 {
+            bad.push(file);
+        }
+    }
+    Ok(bad)
+}
+
+/// 呼んだスレッドを Windows のバックグラウンド モードにする（CPU と I/O の優先度が下がる）。
+/// 戻り値を drop すると元に戻る。
+pub fn background_mode() -> impl Drop {
+    use windows_sys::Win32::System::Threading::{
+        GetCurrentThread, SetThreadPriority, THREAD_MODE_BACKGROUND_BEGIN,
+        THREAD_MODE_BACKGROUND_END,
+    };
+    struct Guard;
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            unsafe { SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END) };
+        }
+    }
+    unsafe { SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN) };
+    Guard
+}
+
 fn sha256_file(path: &Path) -> Result<String> {
     let mut f = std::fs::File::open(path)?;
     let mut hasher = Sha256::new();

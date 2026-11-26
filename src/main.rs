@@ -38,6 +38,49 @@ fn main() {
     std::process::exit(1);
 }
 
+/// モデルのハッシュを確かめ、壊れていたら消して再ダウンロードする。
+#[cfg(windows)]
+fn verify_model_in_background(dir: &std::path::Path, job_tx: &std::sync::mpsc::Sender<asr::Job>) {
+    let started = std::time::Instant::now();
+    let result = {
+        let _background = model::background_mode();
+        model::find_corrupt(dir)
+    };
+    let bad = match result {
+        Ok(bad) if bad.is_empty() => {
+            println!(
+                "[model] ハッシュを確認した（{:.1} 秒）",
+                started.elapsed().as_secs_f64()
+            );
+            return;
+        }
+        Ok(bad) => bad,
+        Err(e) => {
+            eprintln!("[model] ハッシュを確認できない: {e}");
+            return;
+        }
+    };
+
+    eprintln!(
+        "[model] 壊れているファイルがある: {:?}",
+        bad.iter().map(|f| f.name).collect::<Vec<_>>()
+    );
+    // 読み込み中のモデルを外してから消す（読み込み中のファイルは消せない）
+    let _ = job_tx.send(asr::Job::Unload);
+    for file in bad {
+        let path = dir.join(file.name);
+        for _ in 0..20 {
+            if std::fs::remove_file(&path).is_ok() || !path.exists() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        let _ = std::process::Command::new(exe).arg("--setup").status();
+    }
+}
+
 /// 名前付きミューテックスで二重起動を防ぐ。既に起動していれば false。
 #[cfg(windows)]
 fn acquire_single_instance(name: &str) -> bool {
@@ -85,6 +128,8 @@ fn main() -> anyhow::Result<()> {
         return Ok(()); // 既に常駐している
     }
 
+    // --model で指定したときは別のモデルかもしれないので、ハッシュの確認はしない
+    let verify_model = model_dir.is_none();
     let model_dir = match model_dir {
         Some(dir) => {
             anyhow::ensure!(
@@ -114,7 +159,7 @@ fn main() -> anyhow::Result<()> {
     let mut config_mtime = config::modified();
     let (job_tx, job_rx) = mpsc::channel();
     let asr_config = asr::AsrConfig {
-        model_dir,
+        model_dir: model_dir.clone(),
         threads: config.threads as i32,
         unload_after: config.unload_after(),
     };
@@ -127,6 +172,12 @@ fn main() -> anyhow::Result<()> {
             }
         })
     });
+
+    // 起動時に裏でモデルのハッシュを確かめる。壊れていたら消して、ダウンロード画面を出す
+    if verify_model {
+        let job_tx = job_tx.clone();
+        std::thread::spawn(move || verify_model_in_background(&model_dir, &job_tx));
+    }
 
     // ホットキーの押下・解放に応じて録音を開始・終了する
     let (key_tx, key_rx) = mpsc::channel();
