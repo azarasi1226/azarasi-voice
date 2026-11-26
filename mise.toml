@@ -12,3 +12,17 @@ run = "cargo xwin build --release --target x86_64-pc-windows-msvc"
 
 [tasks.check]
 run = "cargo xwin check --target x86_64-pc-windows-msvc"
+
+[tasks.deploy]
+description = "ビルドして %LOCALAPPDATA%\\voice-input にモデルと一緒に配置"
+depends = ["build"]
+run = '''
+set -eu
+dest="$(wslpath "$(cmd.exe /c 'echo %LOCALAPPDATA%' 2>/dev/null | tr -d '\r')")/voice-input"
+mkdir -p "$dest"
+cp target/x86_64-pc-windows-msvc/release/voice-input.exe "$dest/"
+if [ ! -f "$dest/model/model.int8.onnx" ]; then
+  cp -r models/sherpa-onnx-nemo-parakeet-tdt_ctc-0.6b-ja-35000-int8 "$dest/model"
+fi
+echo "配置先: $dest"
+'''
