@@ -18,8 +18,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 pub enum Status {
     Idle = WM_APP + 1,
     Recording = WM_APP + 2,
-    Processing = WM_APP + 3,
-    Quit = WM_APP + 4,
+    Quit = WM_APP + 3,
 }
 
 static MAIN_THREAD: AtomicU32 = AtomicU32::new(0);
@@ -45,7 +44,6 @@ pub fn run() -> Result<()> {
 
     let idle_icon = make_icon(icon_draw::COLOR_IDLE)?;
     let recording_icon = make_icon(icon_draw::COLOR_RECORDING)?;
-    let processing_icon = make_icon(icon_draw::COLOR_PROCESSING)?;
     let tray: TrayIcon = TrayIconBuilder::new()
         .with_icon(idle_icon.clone())
         .with_tooltip("azarasi-voice（Win + 左 Ctrl で録音）")
@@ -76,9 +74,6 @@ pub fn run() -> Result<()> {
                 }
                 m if m == Status::Recording as u32 => {
                     let _ = tray.set_icon(Some(recording_icon.clone()));
-                }
-                m if m == Status::Processing as u32 => {
-                    let _ = tray.set_icon(Some(processing_icon.clone()));
                 }
                 m if m == Status::Quit as u32 => break,
                 _ => {

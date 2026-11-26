@@ -7,8 +7,6 @@
 pub const COLOR_IDLE: [u8; 3] = [0x2B, 0x4C, 0x7E];
 /// 録音中（赤）
 pub const COLOR_RECORDING: [u8; 3] = [0xD9, 0x3B, 0x3B];
-/// 認識中（オレンジ）
-pub const COLOR_PROCESSING: [u8; 3] = [0xE0, 0x8A, 0x1E];
 
 const WHITE: [f32; 3] = [255.0, 255.0, 255.0];
 const DARK: [f32; 3] = [0x22 as f32, 0x26 as f32, 0x30 as f32];
