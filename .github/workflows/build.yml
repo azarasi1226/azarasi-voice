@@ -31,6 +31,9 @@ jobs:
           key: xwin-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'mise.toml') }}
           restore-keys: xwin-${{ runner.os }}-
 
+      - name: Lint (rustfmt / clippy)
+        run: mise run lint
+
       - name: Build
         run: mise run build
 

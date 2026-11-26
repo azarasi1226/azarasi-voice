@@ -13,6 +13,17 @@ run = "cargo xwin build --release --target x86_64-pc-windows-msvc"
 [tasks.check]
 run = "cargo xwin check --target x86_64-pc-windows-msvc"
 
+[tasks.fmt]
+description = "コードを整形"
+run = "cargo fmt"
+
+[tasks.lint]
+description = "整形のずれと clippy の警告をチェック（CI と同じ。警告もエラー扱い）"
+run = [
+  "cargo fmt --check",
+  "cargo xwin clippy --release --target x86_64-pc-windows-msvc --all-targets -- -D warnings",
+]
+
 [tasks.deploy]
 description = "ビルドして %LOCALAPPDATA%\\azarasi-voice に配置（モデルは初回起動時にアプリがダウンロードする）"
 depends = ["build"]
