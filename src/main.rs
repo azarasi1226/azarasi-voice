@@ -2,9 +2,10 @@
 //!
 //! azarasi-voice.exe [--console] [--model <dir>]
 //! azarasi-voice.exe --settings   … 設定画面（トレイから起動される別プロセス）
+//! azarasi-voice.exe --setup      … 初回のモデルのダウンロード画面（モデルが無いと自動で起動される）
 //!
 //! 通常はコンソールを出さずにタスクトレイに常駐する。`--console` でログ表示用のコンソールを開く。
-//! 設定は %APPDATA%\azarasi-voice\config.toml。
+//! 設定は %APPDATA%\azarasi-voice\config.toml、モデルは %LOCALAPPDATA%\azarasi-voice\model。
 
 #![cfg_attr(windows, windows_subsystem = "windows")]
 
@@ -21,9 +22,13 @@ mod hotkey;
 #[cfg(windows)]
 mod icon_draw;
 #[cfg(windows)]
+mod model;
+#[cfg(windows)]
 mod paste;
 #[cfg(windows)]
 mod settings;
+#[cfg(windows)]
+mod setup;
 #[cfg(windows)]
 mod tray;
 
@@ -60,16 +65,18 @@ fn main() -> anyhow::Result<()> {
         }
         return settings::run();
     }
+    if args.first().map(String::as_str) == Some("--setup") {
+        return setup::run();
+    }
 
-    let exe_dir = std::env::current_exe()?.parent().map(PathBuf::from).unwrap_or_default();
-    let mut model_dir = exe_dir.join("model");
+    let mut model_dir: Option<PathBuf> = None;
     let mut it = args.iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--console" => unsafe {
                 windows_sys::Win32::System::Console::AllocConsole();
             },
-            "--model" => model_dir = it.next().context("--model に値がない")?.into(),
+            "--model" => model_dir = Some(it.next().context("--model に値がない")?.into()),
             other => anyhow::bail!("不明な引数: {other}"),
         }
     }
@@ -77,11 +84,24 @@ fn main() -> anyhow::Result<()> {
     if !acquire_single_instance("Local\\azarasi-voice") {
         return Ok(()); // 既に常駐している
     }
-    anyhow::ensure!(
-        model_dir.join("model.int8.onnx").exists(),
-        "モデルが見つからない: {}（--model で指定できる）",
-        model_dir.display()
-    );
+
+    let model_dir = match model_dir {
+        Some(dir) => {
+            anyhow::ensure!(dir.join("model.int8.onnx").exists(), "モデルが見つからない: {}", dir.display());
+            dir
+        }
+        None => {
+            let dir = model::default_dir()?;
+            if !model::is_ready(&dir) {
+                // 初回：ダウンロード画面を別プロセスで出して、終わるのを待つ
+                std::process::Command::new(std::env::current_exe()?).arg("--setup").status()?;
+                if !model::is_ready(&dir) {
+                    return Ok(()); // キャンセルされた
+                }
+            }
+            dir
+        }
+    };
 
     // 音声認識ワーカー
     let mut config = Config::load();

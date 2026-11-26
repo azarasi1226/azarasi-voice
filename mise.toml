@@ -14,7 +14,7 @@ run = "cargo xwin build --release --target x86_64-pc-windows-msvc"
 run = "cargo xwin check --target x86_64-pc-windows-msvc"
 
 [tasks.deploy]
-description = "ビルドして %LOCALAPPDATA%\\azarasi-voice にモデルと一緒に配置"
+description = "ビルドして %LOCALAPPDATA%\\azarasi-voice に配置（モデルは初回起動時にアプリがダウンロードする）"
 depends = ["build"]
 run = '''
 set -eu
@@ -24,8 +24,5 @@ mkdir -p "$dest"
 rm -f "$dest"/azarasi-voice.old-*.exe 2>/dev/null || true  # 使用中のものは消えずに残る
 if [ -f "$dest/azarasi-voice.exe" ]; then mv "$dest/azarasi-voice.exe" "$dest/azarasi-voice.old-$(date +%s).exe"; fi
 cp target/x86_64-pc-windows-msvc/release/azarasi-voice.exe "$dest/"
-if [ ! -f "$dest/model/model.int8.onnx" ]; then
-  cp -r models/sherpa-onnx-nemo-parakeet-tdt_ctc-0.6b-ja-35000-int8 "$dest/model"
-fi
 echo "配置先: $dest"
 '''

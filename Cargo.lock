@@ -365,6 +365,7 @@ dependencies = [
  "arboard",
  "cpal",
  "serde",
+ "sha2",
  "sherpa-onnx",
  "slint",
  "toml",

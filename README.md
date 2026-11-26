@@ -1,59 +1,83 @@
 # azarasi-voice
 
-Windows 用の音声入力ツール。ホットキーを押している間だけ録音し、ローカルの音声認識で文字にして、（必要なら）Claude で整えてから、開いているウィンドウに貼り付ける。
+Windows 用の音声入力ツール。ホットキーを押している間だけ録音し、ローカルの音声認識で文字にして、開いているウィンドウに貼り付ける。
 
-## 方針
+- **Win + 左 Ctrl を押している間だけ録音**し、離すと文字にして貼り付ける
+- 音声認識はすべて PC の中で行う（NVIDIA の [Parakeet 日本語版](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja)）。音声を外部に送らない
+- **GPU / VRAM を使わない**。ゲームと並行して使っても邪魔をしない
+- 待機中は数十 MB。話したときだけモデルを読み込み、しばらく使わなければメモリから外す
+- タスクトレイに常駐し、録音中はアイコンが赤くなる
 
-ゲームと並行して使えるように、**待機中は軽く、話したときだけ重くなる**ことを最優先にする。
+## インストール
 
-- GPU / VRAM は使わない。音声認識は CPU で動かす。
-- 待機中はキー入力の監視だけ。モデルはホットキーを押した瞬間に読み込み始め（話している間に終わる）、しばらく使わなければメモリから外す。
+1. [Releases](https://github.com/azarasi1226/azarasi-voice/releases/latest) から `azarasi-voice.exe` をダウンロードし、好きな場所に置く
+2. `azarasi-voice.exe` を起動する
+   - 「Windows によって PC が保護されました」と出たら「詳細情報」→「実行」
+3. 初回だけ、音声認識モデル（約 655 MB）のダウンロード画面が出る。終わると自動でタスクトレイに常駐する
+4. タスクトレイの「∧」の中にあるあざらしのアイコンを、時計の横までドラッグしておくと、録音中かどうかがひと目でわかる
 
-## 仕様
-
-| 項目 | 内容 |
-|---|---|
-| 音声認識 | Parakeet 日本語版（`parakeet-tdt_ctc-0.6b-ja` int8）を sherpa-onnx で CPU 実行 |
-| ホットキー | Win + 左 Ctrl を押している間だけ録音 |
-| 貼り付け | クリップボードに入れて Ctrl+V を送り、元のクリップボードの中身は戻す |
-| 整形 | Claude Haiku（Anthropic API）。オフ / 軽め / しっかり を選べる（オフなら API 代はかからない） |
-| 見た目 | タスクトレイに常駐。アイコンをクリックすると設定画面が開く |
-| ビルド | WSL から Windows 用の exe をクロスコンパイル（`cargo-xwin`） |
+**スマート アプリ コントロールについて**：Windows のスマート アプリ コントロールがオンだと、署名のない exe は起動できない。[SignPath Foundation](https://signpath.org/) のオープンソース向けの無料署名を申請する予定。
 
 ## 使い方
 
-`mise run deploy` で `%LOCALAPPDATA%\azarasi-voice` に exe とモデルが置かれる。`azarasi-voice.exe` を起動するとタスクトレイに常駐する。
-
-- Win + 左 Ctrl を押している間だけ録音（トレイのアイコンが赤くなる）。離すと文字にして貼り付ける
-- トレイのアイコンは待機中が紺、録音中が赤。「∧」の中に隠れていると見えないので、時計の横までドラッグして常に表示しておく
+- **Win + 左 Ctrl** を押している間だけ録音する（アイコンが赤くなる）。離すと文字にして、開いているウィンドウに貼り付ける
+- 貼り付けはクリップボード経由。直前にコピーしていた文字や画像は、貼り付けたあとに元に戻す
 - トレイのアイコンを左クリックで設定画面、右クリックでメニュー（設定を開く / 終了）
-- 設定は `%APPDATA%\azarasi-voice\config.toml`。設定画面で保存すると、次にホットキーを押したときに反映される
-- 設定画面の「Windows の起動時に自動で起動する」で、`HKCU\...\CurrentVersion\Run` に登録・解除する
-- ログを見たいときは `azarasi-voice.exe --console` で起動する
+- 設定画面でできること
+  - 音声認識に使う CPU スレッド数
+  - モデルをメモリから外すまでの時間
+  - Windows の起動時に自動で起動する
+- 管理者権限で動いているウィンドウには貼り付けられない（Windows の仕組み上の制限）
 
-設定画面（`azarasi-voice.exe --settings`）は別プロセスで、閉じるとプロセスごと終了する。Slint のソフトウェアレンダラーで描画するので GPU は使わない。
+## アンインストール
 
-### 計測結果（Windows、Ryzen 9 9900X3D、4 スレッド）
+1. 設定画面で「Windows の起動時に自動で起動する」のチェックを外して保存する
+2. トレイのアイコンを右クリック →「終了」
+3. 次のフォルダを削除する
+   - `azarasi-voice.exe` を置いた場所
+   - `%LOCALAPPDATA%\azarasi-voice`（音声認識モデル）
+   - `%APPDATA%\azarasi-voice`（設定）
+
+## プライバシー
+
+azarasi-voice は、初回起動時の音声認識モデルのダウンロード（このリポジトリの GitHub Releases から）を除いて、ネットワークに接続しない。録音した音声も、認識した文字も、外部には送らない。
+
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The only network access is the one-time download of the speech recognition model from this repository's GitHub Releases.
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/)（申請予定）
+
+- Committers and reviewers: [azarasi1226](https://github.com/azarasi1226)
+- Approvers: [azarasi1226](https://github.com/azarasi1226)
+
+署名する exe は、このリポジトリのソースから GitHub Actions で自動ビルドしたものだけ。
+
+## 仕組み
+
+| 項目 | 内容 |
+|---|---|
+| 音声認識 | Parakeet 日本語版（`parakeet-tdt_ctc-0.6b-ja` の int8 ONNX 変換版）を sherpa-onnx で CPU 実行 |
+| モデル | `%LOCALAPPDATA%\azarasi-voice\model`。初回起動時に [Releases](https://github.com/azarasi1226/azarasi-voice/releases/tag/model-parakeet-ja-int8-v1) からダウンロードし、SHA-256 で中身を確認する |
+| 設定 | `%APPDATA%\azarasi-voice\config.toml`。設定画面で保存すると、次にホットキーを押したときに反映される |
+| 自動起動 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` に登録・解除する |
+| 画面 | 設定画面とダウンロード画面は別プロセスで、閉じるとプロセスごと終了する。Slint のソフトウェアレンダラーで描画するので GPU は使わない |
+
+### 計測結果（Ryzen 9 9900X3D、4 スレッド）
 
 | 項目 | 結果 |
 |---|---|
-| モデル読み込み | 約 1.2 秒 |
+| モデル読み込み | 約 1.2 秒（ホットキーを押した瞬間に始まり、話している間に終わる） |
 | 13 秒の音声の認識 | 約 0.3 秒 |
 | メモリ（モデル読み込み中） | 約 700〜800 MB |
 | メモリ（モデル解放後） | 約 30〜40 MB |
 
-`cargo run --release --bin bench -- <モデルのディレクトリ> <スレッド数> <wav>...` で再計測できる。
+## 開発
 
-### 注意：スマート アプリ コントロール
-
-Windows のスマート アプリ コントロールがオンだと、署名のない exe は「Device Guard ポリシーによってブロック」されて起動できない。[SignPath Foundation](https://signpath.org/) のオープンソース向け無料署名を申請する予定。それまではオフにして使う。
-
-## 開発環境のセットアップ（WSL）
-
-Rust と cargo-xwin のバージョンは `mise.toml` で管理している。ただし clang / lld は mise では入れられないので、apt で入れる。
+WSL から Windows 用の exe をクロスコンパイルする（`cargo-xwin`）。Rust と cargo-xwin のバージョンは `mise.toml` で管理している。clang / lld は mise では入れられないので apt で入れる。
 
 ```sh
-# 1. clang / lld（cargo-xwin が Windows 向けのリンクと C/C++ のビルドに使う）
+# 1. clang / lld / llvm-rc（cargo-xwin が Windows 向けのリンクと C/C++ のビルドに、build.rs がアイコンの埋め込みに使う）
 sudo apt install clang lld llvm
 
 # 2. Rust・Windows ターゲット・cargo-xwin
@@ -61,17 +85,14 @@ mise install
 
 # 3. ビルド（初回は MSVC CRT と Windows SDK のダウンロードで数分かかる）
 mise run build
+
+# 4. %LOCALAPPDATA%\azarasi-voice に配置（起動中でも置き換えられる）
+mise run deploy
 ```
 
-Anthropic API キーは `.env` に `ANTHROPIC_API_KEY=...` と書く（`.gitignore` 済み）。
-
-### モデルのダウンロード
-
-```sh
-mkdir -p models && cd models
-curl -LO https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt_ctc-0.6b-ja-35000-int8.tar.bz2
-tar xjf sherpa-onnx-nemo-parakeet-tdt_ctc-0.6b-ja-35000-int8.tar.bz2   # bzip2 が無ければ sudo apt install bzip2
-```
+- ログを見たいときは `azarasi-voice.exe --console` で起動する
+- 速度とメモリは `cargo run --release --bin bench -- <モデルのディレクトリ> <スレッド数> <wav>...` で計測できる
+- 初回セットアップ画面の動作確認は、環境変数 `AZARASI_VOICE_MODEL_DIR` に空のフォルダを指定して `azarasi-voice.exe --setup` を起動する
 
 ## ライセンス
 
@@ -81,4 +102,4 @@ tar xjf sherpa-onnx-nemo-parakeet-tdt_ctc-0.6b-ja-35000-int8.tar.bz2   # bzip2 �
 
 - [Slint](https://slint.dev/)（GPL-3.0 で利用）
 - [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)（Apache-2.0）
-- 音声認識モデル [nvidia/parakeet-tdt_ctc-0.6b-ja](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja)（CC-BY-4.0、NVIDIA）。リポジトリには含めず、別途ダウンロードする
+- 音声認識モデル [nvidia/parakeet-tdt_ctc-0.6b-ja](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja)（CC-BY-4.0、NVIDIA）。sherpa-onnx による int8 ONNX 変換版を [Releases](https://github.com/azarasi1226/azarasi-voice/releases/tag/model-parakeet-ja-int8-v1) で再配布している
