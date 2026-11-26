@@ -4,7 +4,7 @@
 
 - ⚡ **軽量・高速**：待機中のメモリは 30〜40 MB
 - 🎮 **ゲームと一緒に使える**：GPU を一切使わない（VRAM 0 MB）
-- 🇯🇵 **高精度な日本語入力**：NVIDIA の [Parakeet 日本語版](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja)
+- 🎌 **高精度な日本語入力**：NVIDIA の [Parakeet 日本語版](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja)
 - 🔒 **完全ローカル**：音声を外部に送らない。無料・オープンソース
 
 [📚 ドキュメントサイト](https://azarasi1226.github.io/azarasi-voice/)
