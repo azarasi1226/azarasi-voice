@@ -86,7 +86,7 @@ mise install
 # 3. ビルド（初回は MSVC CRT と Windows SDK のダウンロードで数分かかる）
 mise run build
 
-# 4. %LOCALAPPDATA%\azarasi-voice に配置（起動中でも置き換えられる）
+# 4. Windows のダウンロードフォルダの azarasi-voice-dev に exe を配置（起動中でも置き換えられる）
 mise run deploy
 ```
 

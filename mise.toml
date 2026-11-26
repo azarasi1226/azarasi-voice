@@ -25,11 +25,13 @@ run = [
 ]
 
 [tasks.deploy]
-description = "ビルドして %LOCALAPPDATA%\\azarasi-voice に配置（モデルは初回起動時にアプリがダウンロードする）"
+description = "ビルドして Windows のダウンロードフォルダの azarasi-voice-dev に exe を配置（モデルは %LOCALAPPDATA%\\azarasi-voice\\model）"
 depends = ["build"]
 run = '''
 set -eu
-dest="$(wslpath "$(cmd.exe /c 'echo %LOCALAPPDATA%' 2>/dev/null | tr -d '\r')")/azarasi-voice"
+# 開発用の exe は消し忘れないよう、目に付くダウンロードフォルダに置く
+downloads="$(powershell.exe -NoProfile -Command "(New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path" | tr -d '\r')"
+dest="$(wslpath "$downloads")/azarasi-voice-dev"
 mkdir -p "$dest"
 # 起動中の exe は上書きできないが名前変更はできるので、古い方を退避してから置く
 rm -f "$dest"/azarasi-voice.old-*.exe 2>/dev/null || true  # 使用中のものは消えずに残る
