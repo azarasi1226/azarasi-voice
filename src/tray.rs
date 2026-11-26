@@ -93,9 +93,7 @@ pub fn run() -> Result<()> {
 
 /// 設定画面を別プロセスで開く。
 fn open_settings() {
-    let result = std::env::current_exe()
-        .and_then(|exe| std::process::Command::new(exe).arg("--settings").spawn());
-    if let Err(e) = result {
+    if let Err(e) = crate::child::spawn("--settings") {
         eprintln!("[tray] 設定画面を開けない: {e}");
     }
 }

@@ -2,11 +2,18 @@
 //!
 //! 音声ファイルは持たず、起動後の初回に短い 2 音の WAV をメモリ上で作って、
 //! Windows 標準の PlaySound で非同期に鳴らす。
+//!
+//! ワイヤレスヘッドセットなどは、無音が続くと音声の通り道を止め、音が来てから再開する。
+//! 再開までの間に鳴らした音は聞こえないので、効果音の前に耳では聞こえない小さな音を流して起こしておく。
+//! 完全な無音だと「音が来ていない」とみなして起きない機器があるため、無音ではなく小さな音にしている。
 
 use std::sync::OnceLock;
 use windows_sys::Win32::Media::Audio::{PlaySoundW, SND_ASYNC, SND_MEMORY, SND_NODEFAULT};
 
 const SAMPLE_RATE: u32 = 44_100;
+
+/// 機器を起こすための前置きの長さ（秒）
+const WAKE_SECONDS: f32 = 0.4;
 
 /// 録音開始（低→高）
 pub fn play_start() {
@@ -31,14 +38,14 @@ fn play(wav: &'static [u8]) {
     };
 }
 
-/// 2 つの短い音を続けて鳴らす 16bit モノラルの WAV を作る。
+/// 機器を起こす前置きのあとに、2 つの短い音を続けて鳴らす 16bit モノラルの WAV を作る。
 fn two_tone_wav(first_hz: f32, second_hz: f32) -> Vec<u8> {
-    let mut samples = Vec::new();
+    let mut samples: Vec<i16> = wake_up().collect();
     for hz in [first_hz, second_hz] {
-        samples.extend(tone(hz, 0.06));
+        samples.extend(tone(hz, 0.05));
         samples.extend(std::iter::repeat_n(
             0i16,
-            (SAMPLE_RATE as f32 * 0.015) as usize,
+            (SAMPLE_RATE as f32 * 0.01) as usize,
         ));
     }
 
@@ -60,6 +67,15 @@ fn two_tone_wav(first_hz: f32, second_hz: f32) -> Vec<u8> {
         wav.extend_from_slice(&s.to_le_bytes());
     }
     wav
+}
+
+/// 耳では聞こえない小さな低音（30Hz、約 -66dB）。
+fn wake_up() -> impl Iterator<Item = i16> {
+    let n = (SAMPLE_RATE as f32 * WAKE_SECONDS) as usize;
+    (0..n).map(|i| {
+        let t = i as f32 / SAMPLE_RATE as f32;
+        ((2.0 * std::f32::consts::PI * 30.0 * t).sin() * 16.0) as i16
+    })
 }
 
 /// 立ち上がりを数 ms でなめらかにし、指数的に減衰させた正弦波（「ポッ」という柔らかい音）。

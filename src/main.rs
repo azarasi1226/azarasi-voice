@@ -16,6 +16,8 @@ mod audio;
 #[cfg(windows)]
 mod autostart;
 #[cfg(windows)]
+mod child;
+#[cfg(windows)]
 mod config;
 #[cfg(windows)]
 mod hotkey;
@@ -78,9 +80,7 @@ fn verify_model_in_background(dir: &std::path::Path, job_tx: &std::sync::mpsc::S
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
     }
-    if let Ok(exe) = std::env::current_exe() {
-        let _ = std::process::Command::new(exe).arg("--setup").status();
-    }
+    let _ = child::spawn("--setup").and_then(|mut c| c.wait());
 }
 
 /// 名前付きミューテックスで二重起動を防ぐ。既に起動していれば false。
@@ -128,9 +128,7 @@ fn main() -> anyhow::Result<()> {
     let model_dir = model::default_dir()?;
     if !model::is_ready(&model_dir) {
         // 初回：ダウンロード画面を別プロセスで出して、終わるのを待つ
-        std::process::Command::new(std::env::current_exe()?)
-            .arg("--setup")
-            .status()?;
+        child::spawn("--setup")?.wait()?;
         if !model::is_ready(&model_dir) {
             return Ok(()); // キャンセルされた
         }
@@ -182,16 +180,19 @@ fn main() -> anyhow::Result<()> {
                     }
 
                     let _ = job_tx.send(asr::Job::Prepare);
+                    tray::notify(tray::Status::Recording);
+                    if config.sound {
+                        sound::play_start();
+                    }
                     match audio::Recording::start() {
                         Ok(r) => {
                             println!("[rec] 録音開始");
-                            tray::notify(tray::Status::Recording);
-                            if config.sound {
-                                sound::play_start();
-                            }
                             recording = Some(r);
                         }
-                        Err(e) => eprintln!("[rec] 録音を開始できない: {e}"),
+                        Err(e) => {
+                            eprintln!("[rec] 録音を開始できない: {e}");
+                            tray::notify(tray::Status::Idle);
+                        }
                     }
                 }
                 HotkeyEvent::Released => {

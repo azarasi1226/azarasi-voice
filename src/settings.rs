@@ -11,7 +11,7 @@ use slint::ComponentHandle;
 
 slint::slint! {
     #[edition = "1.19"]
-    import { Button, CheckBox, SpinBox, GroupBox, TabWidget, AboutSlint } from "std-widgets.slint";
+    import { Button, CheckBox, ComboBox, GroupBox, TabWidget, AboutSlint } from "std-widgets.slint";
 
     export component SettingsWindow inherits Window {
         title: "azarasi-voice 設定";
@@ -20,7 +20,7 @@ slint::slint! {
         default-font-size: 14px;
 
         in-out property <bool> sound;
-        in-out property <int> unload-minutes;
+        in-out property <int> unload-index;
         in-out property <bool> autostart;
         in property <image> app-icon;
         icon: app-icon;
@@ -42,11 +42,21 @@ slint::slint! {
 
                         GroupBox {
                             title: "音声認識";
-                            GridLayout {
-                                spacing: 8px;
-                                Row {
-                                    Text { text: "モデルを外すまで（分、0 で外さない）"; vertical-alignment: center; }
-                                    SpinBox { minimum: 0; maximum: 120; value <=> root.unload-minutes; }
+                            VerticalLayout {
+                                spacing: 6px;
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    Text { text: "メモリを解放するまで（分）"; vertical-alignment: center; horizontal-stretch: 1; }
+                                    ComboBox {
+                                        model: ["1 分", "2 分", "3 分", "5 分", "8 分", "13 分", "21 分", "34 分", "55 分", "解放しない"];
+                                        current-index <=> root.unload-index;
+                                    }
+                                }
+                                Text {
+                                    text: "最後に使ってからこの時間が経つと、音声認識モデル（約 700 MB）をメモリから解放します。次に使うときは約 1 秒で読み込み直します。";
+                                    wrap: word-wrap;
+                                    color: #999;
+                                    font-size: 12px;
                                 }
                             }
                         }
@@ -87,11 +97,25 @@ slint::slint! {
     }
 }
 
+/// 「メモリを解放するまで」の選択肢（分）。画面の ComboBox の並びと揃える。0 は「解放しない」。
+const UNLOAD_MINUTES: [u32; 10] = [1, 2, 3, 5, 8, 13, 21, 34, 55, 0];
+
+fn unload_minutes_to_index(minutes: u32) -> i32 {
+    let i = UNLOAD_MINUTES.iter().position(|&m| m == minutes);
+    // 一覧にない値（手で書き換えた設定ファイルなど）は既定の 5 分として表示する
+    i.or_else(|| UNLOAD_MINUTES.iter().position(|&m| m == 5))
+        .unwrap_or(0) as i32
+}
+
+fn index_to_unload_minutes(index: i32) -> u32 {
+    UNLOAD_MINUTES.get(index as usize).copied().unwrap_or(5)
+}
+
 pub fn run() -> Result<()> {
     let config = Config::load();
     let ui = SettingsWindow::new()?;
     ui.set_sound(config.sound);
-    ui.set_unload_minutes(config.unload_after_minutes as i32);
+    ui.set_unload_index(unload_minutes_to_index(config.unload_after_minutes));
     ui.set_autostart(autostart::is_enabled());
     const ICON_SIZE: u32 = 64;
     let pixels = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
@@ -106,7 +130,7 @@ pub fn run() -> Result<()> {
         let Some(ui) = weak.upgrade() else { return };
         let new = Config {
             sound: ui.get_sound(),
-            unload_after_minutes: ui.get_unload_minutes().max(0) as u32,
+            unload_after_minutes: index_to_unload_minutes(ui.get_unload_index()),
         };
         let result = new
             .save()
