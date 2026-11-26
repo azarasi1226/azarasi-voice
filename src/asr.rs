@@ -20,7 +20,7 @@ pub enum Job {
     Reconfigure { threads: i32, unload_after: Option<Duration> },
     /// 録音開始。まだならモデルを読み込んでおく。
     Prepare,
-    /// 録音した音声を文字にして、結果を `on_text` に渡す。
+    /// 録音した音声を文字にして、結果を `on_text` に渡す（認識できなければ空文字）。
     Transcribe { samples: Vec<f32>, sample_rate: u32 },
 }
 
@@ -56,7 +56,12 @@ pub fn run(mut config: AsrConfig, jobs: Receiver<Job>, mut on_text: impl FnMut(S
         if recognizer.is_none() {
             recognizer = load(&config);
         }
-        let Some(rec) = recognizer.as_ref() else { continue };
+        let Some(rec) = recognizer.as_ref() else {
+            if matches!(job, Job::Transcribe { .. }) {
+                on_text(String::new());
+            }
+            continue;
+        };
 
         if let Job::Transcribe { samples, sample_rate } = job {
             let t = Instant::now();
@@ -69,10 +74,7 @@ pub fn run(mut config: AsrConfig, jobs: Receiver<Job>, mut on_text: impl FnMut(S
                 "[asr] {audio_sec:.1} 秒の音声を {:.2} 秒で認識: {text}",
                 t.elapsed().as_secs_f64()
             );
-            let text = text.trim().to_string();
-            if !text.is_empty() {
-                on_text(text);
-            }
+            on_text(text.trim().to_string());
         }
     }
 }

@@ -19,6 +19,8 @@ mod config;
 #[cfg(windows)]
 mod hotkey;
 #[cfg(windows)]
+mod icon_draw;
+#[cfg(windows)]
 mod paste;
 #[cfg(windows)]
 mod settings;
@@ -92,9 +94,12 @@ fn main() -> anyhow::Result<()> {
     };
     std::thread::spawn(move || {
         asr::run(asr_config, job_rx, |text| {
-            if let Err(e) = paste::paste(&text) {
+            if !text.is_empty()
+                && let Err(e) = paste::paste(&text)
+            {
                 eprintln!("[paste] 貼り付けに失敗: {e}");
             }
+            tray::notify(tray::Status::Idle);
         })
     });
 
@@ -132,14 +137,15 @@ fn main() -> anyhow::Result<()> {
                 }
                 HotkeyEvent::Released => {
                     let Some(r) = recording.take() else { continue };
-                    tray::notify(tray::Status::Idle);
                     let samples = r.finish();
                     let sample_rate = audio::SAMPLE_RATE;
                     let sec = samples.len() as f32 / sample_rate as f32;
                     println!("[rec] 録音終了 ({sec:.1} 秒)");
                     if sec < 0.3 {
+                        tray::notify(tray::Status::Idle);
                         continue; // 押し間違いとみなす
                     }
+                    tray::notify(tray::Status::Processing);
                     let _ = job_tx.send(asr::Job::Transcribe { samples, sample_rate });
                 }
             }

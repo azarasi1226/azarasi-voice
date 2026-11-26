@@ -5,6 +5,7 @@
 
 use crate::autostart;
 use crate::config::{Config, Formatting};
+use crate::icon_draw;
 use anyhow::Result;
 use slint::ComponentHandle;
 
@@ -23,6 +24,8 @@ slint::slint! {
         in-out property <int> formatting-index;
         in-out property <string> api-key;
         in-out property <bool> autostart;
+        in property <image> app-icon;
+        icon: app-icon;
         in-out property <string> status;
         callback save();
         callback close-clicked();
@@ -132,6 +135,13 @@ pub fn run() -> Result<()> {
     ui.set_formatting_index(formatting_to_index(config.formatting));
     ui.set_api_key(config.anthropic_api_key.clone().into());
     ui.set_autostart(autostart::is_enabled());
+    const ICON_SIZE: u32 = 64;
+    let pixels = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
+        &icon_draw::render_icon(ICON_SIZE, icon_draw::COLOR_IDLE),
+        ICON_SIZE,
+        ICON_SIZE,
+    );
+    ui.set_app_icon(slint::Image::from_rgba8(pixels));
 
     let weak = ui.as_weak();
     ui.on_save(move || {

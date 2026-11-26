@@ -3,6 +3,7 @@
 //! アイコンはメインスレッド（メッセージループのあるスレッド）でしか触れないので、
 //! 他のスレッドからは `notify` でスレッドメッセージを送って状態を伝える。
 
+use crate::icon_draw;
 use anyhow::Result;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
@@ -17,7 +18,8 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 pub enum Status {
     Idle = WM_APP + 1,
     Recording = WM_APP + 2,
-    Quit = WM_APP + 3,
+    Processing = WM_APP + 3,
+    Quit = WM_APP + 4,
 }
 
 static MAIN_THREAD: AtomicU32 = AtomicU32::new(0);
@@ -41,8 +43,9 @@ pub fn run() -> Result<()> {
     menu.append(&PredefinedMenuItem::separator())?;
     menu.append(&quit_item)?;
 
-    let idle_icon = circle_icon([150, 150, 150])?;
-    let recording_icon = circle_icon([230, 60, 60])?;
+    let idle_icon = make_icon(icon_draw::COLOR_IDLE)?;
+    let recording_icon = make_icon(icon_draw::COLOR_RECORDING)?;
+    let processing_icon = make_icon(icon_draw::COLOR_PROCESSING)?;
     let tray: TrayIcon = TrayIconBuilder::new()
         .with_icon(idle_icon.clone())
         .with_tooltip("voice-input（Win + 左 Ctrl で録音）")
@@ -74,6 +77,9 @@ pub fn run() -> Result<()> {
                 m if m == Status::Recording as u32 => {
                     let _ = tray.set_icon(Some(recording_icon.clone()));
                 }
+                m if m == Status::Processing as u32 => {
+                    let _ = tray.set_icon(Some(processing_icon.clone()));
+                }
                 m if m == Status::Quit as u32 => break,
                 _ => {
                     TranslateMessage(&msg);
@@ -93,18 +99,8 @@ fn open_settings() {
     }
 }
 
-/// 単色の丸いアイコンを作る。
-fn circle_icon([r, g, b]: [u8; 3]) -> Result<Icon> {
+/// トレイ用のアイコン。高 DPI でもぼやけないよう 32px で作り、Windows に縮小させる。
+fn make_icon(color: [u8; 3]) -> Result<Icon> {
     const SIZE: u32 = 32;
-    let mut rgba = Vec::with_capacity((SIZE * SIZE * 4) as usize);
-    let c = (SIZE as f32 - 1.0) / 2.0;
-    for y in 0..SIZE {
-        for x in 0..SIZE {
-            let d = ((x as f32 - c).powi(2) + (y as f32 - c).powi(2)).sqrt();
-            // 縁を 1px ぼかしてギザギザを抑える
-            let alpha = (c - 1.0 - d + 0.5).clamp(0.0, 1.0);
-            rgba.extend_from_slice(&[r, g, b, (alpha * 255.0) as u8]);
-        }
-    }
-    Ok(Icon::from_rgba(rgba, SIZE, SIZE)?)
+    Ok(Icon::from_rgba(icon_draw::render_icon(SIZE, color), SIZE, SIZE)?)
 }
