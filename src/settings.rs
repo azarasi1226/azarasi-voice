@@ -3,13 +3,14 @@
 //! 閉じたらプロセスごと終了するので、常駐中の本体のメモリは増えない。
 //! GPU を使わないよう、Slint のソフトウェアレンダラー（CPU 描画）だけを有効にしている。
 
+use crate::autostart;
 use crate::config::{Config, Formatting};
 use anyhow::Result;
 use slint::ComponentHandle;
 
 slint::slint! {
     #[edition = "1.19"]
-    import { Button, ComboBox, LineEdit, SpinBox, GroupBox, TabWidget, AboutSlint } from "std-widgets.slint";
+    import { Button, CheckBox, ComboBox, LineEdit, SpinBox, GroupBox, TabWidget, AboutSlint } from "std-widgets.slint";
 
     export component SettingsWindow inherits Window {
         title: "voice-input 設定";
@@ -21,6 +22,7 @@ slint::slint! {
         in-out property <int> unload-minutes;
         in-out property <int> formatting-index;
         in-out property <string> api-key;
+        in-out property <bool> autostart;
         in-out property <string> status;
         callback save();
         callback close-clicked();
@@ -50,6 +52,11 @@ slint::slint! {
                                     SpinBox { minimum: 0; maximum: 120; value <=> root.unload-minutes; }
                                 }
                             }
+                        }
+
+                        GroupBox {
+                            title: "起動";
+                            CheckBox { text: "Windows の起動時に自動で起動する"; checked <=> root.autostart; }
                         }
 
                         GroupBox {
@@ -124,6 +131,7 @@ pub fn run() -> Result<()> {
     ui.set_unload_minutes(config.unload_after_minutes as i32);
     ui.set_formatting_index(formatting_to_index(config.formatting));
     ui.set_api_key(config.anthropic_api_key.clone().into());
+    ui.set_autostart(autostart::is_enabled());
 
     let weak = ui.as_weak();
     ui.on_save(move || {
@@ -134,7 +142,8 @@ pub fn run() -> Result<()> {
             formatting: index_to_formatting(ui.get_formatting_index()),
             anthropic_api_key: ui.get_api_key().trim().to_string(),
         };
-        match new.save() {
+        let result = new.save().and_then(|()| autostart::set_enabled(ui.get_autostart()));
+        match result {
             Ok(()) => ui.set_status("保存した".into()),
             Err(e) => ui.set_status(format!("保存に失敗: {e}").into()),
         }

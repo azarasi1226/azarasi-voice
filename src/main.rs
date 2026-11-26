@@ -13,6 +13,8 @@ mod asr;
 #[cfg(windows)]
 mod audio;
 #[cfg(windows)]
+mod autostart;
+#[cfg(windows)]
 mod config;
 #[cfg(windows)]
 mod hotkey;
