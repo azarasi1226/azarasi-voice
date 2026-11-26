@@ -7,18 +7,6 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum Formatting {
-    /// 認識結果をそのまま貼る
-    #[default]
-    Off,
-    /// 句読点と言い淀みだけ直す
-    Light,
-    /// 文体まで整える
-    Full,
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -26,10 +14,6 @@ pub struct Config {
     pub threads: u32,
     /// 最後に使ってからモデルを外すまでの分数。0 なら外さない。
     pub unload_after_minutes: u32,
-    /// Claude による整形（未実装）
-    pub formatting: Formatting,
-    /// Anthropic API キー（整形を使うときだけ必要）
-    pub anthropic_api_key: String,
 }
 
 impl Default for Config {
@@ -37,8 +21,6 @@ impl Default for Config {
         Self {
             threads: 4,
             unload_after_minutes: 5,
-            formatting: Formatting::Off,
-            anthropic_api_key: String::new(),
         }
     }
 }

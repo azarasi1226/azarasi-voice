@@ -1,6 +1,2 @@
 /target
-/models
-*.wav
-.env
-config.local.toml
 /installer/Output

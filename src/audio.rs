@@ -4,8 +4,7 @@ use anyhow::{Context, Result, anyhow};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleFormat, Stream};
 use sherpa_onnx::LinearResampler;
-use std::sync::{Arc, Mutex, OnceLock};
-use std::time::Instant;
+use std::sync::{Arc, Mutex};
 
 /// 音声認識モデルの入力サンプリングレート。
 pub const SAMPLE_RATE: u32 = 16_000;
@@ -14,17 +13,11 @@ pub struct Recording {
     _stream: Stream,
     buffer: Arc<Mutex<Vec<f32>>>,
     sample_rate: u32,
-    /// start() が呼ばれた時刻
-    started: Instant,
-    /// 最初の音声データが届いた時刻（話し出しが切れていないかの確認用）
-    first_data: Arc<OnceLock<Instant>>,
 }
 
 impl Recording {
     /// 既定のマイクで録音を始める。
     pub fn start() -> Result<Self> {
-        let started = Instant::now();
-        let first_data: Arc<OnceLock<Instant>> = Arc::new(OnceLock::new());
         let device = cpal::default_host()
             .default_input_device()
             .context("マイクが見つからない")?;
@@ -42,23 +35,19 @@ impl Recording {
         };
         let stream = match supported.sample_format() {
             SampleFormat::F32 => {
-                let (buf, first) = (buffer.clone(), first_data.clone());
+                let buf = buffer.clone();
                 device.build_input_stream(
                     config,
-                    move |data: &[f32], _: &_| {
-                        first.get_or_init(Instant::now);
-                        push_mono(&buf, data, channels, |s| s)
-                    },
+                    move |data: &[f32], _: &_| push_mono(&buf, data, channels, |s| s),
                     on_err,
                     None,
                 )?
             }
             SampleFormat::I16 => {
-                let (buf, first) = (buffer.clone(), first_data.clone());
+                let buf = buffer.clone();
                 device.build_input_stream(
                     config,
                     move |data: &[i16], _: &_| {
-                        first.get_or_init(Instant::now);
                         push_mono(&buf, data, channels, |s| s as f32 / i16::MAX as f32)
                     },
                     on_err,
@@ -73,8 +62,6 @@ impl Recording {
             _stream: stream,
             buffer,
             sample_rate,
-            started,
-            first_data,
         })
     }
 
@@ -82,12 +69,6 @@ impl Recording {
     pub fn finish(self) -> Vec<f32> {
         let sample_rate = self.sample_rate;
         let buffer = self.buffer.clone();
-        if let Some(first) = self.first_data.get() {
-            println!(
-                "[rec] 押してから音が入り始めるまで: {} ms",
-                (*first - self.started).as_millis()
-            );
-        }
         drop(self); // ストリームを閉じる
         let samples = std::mem::take(&mut *buffer.lock().unwrap());
         if sample_rate == SAMPLE_RATE {

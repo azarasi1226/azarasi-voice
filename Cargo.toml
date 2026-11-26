@@ -5,13 +5,10 @@ edition = "2024"
 license = "GPL-3.0-only"
 repository = "https://github.com/azarasi1226/azarasi-voice"
 
-# 本体は Windows 専用。Linux でも bench（src/bin/bench.rs）だけはビルドできるよう、
-# 音声認識エンジンだけを全プラットフォーム共通の依存にしている。
-[dependencies]
+# Windows 専用のアプリなので、依存はすべて Windows 向けにだけ入れる
+[target."cfg(windows)".dependencies]
 # 音声認識エンジン（Parakeet を ONNX Runtime で CPU 実行）。ビルド時に ONNX Runtime 込みのビルド済みライブラリをダウンロードし、exe に静的リンクする
 sherpa-onnx = "2.0.3"
-
-[target."cfg(windows)".dependencies]
 # エラー処理（anyhow::Result と文脈付きのエラーメッセージ）
 anyhow = "1.0.105"
 # クリップボードの読み書き（貼り付けと、元の中身を戻すのに使う）
@@ -38,7 +35,6 @@ windows-sys = { version = "0.61", features = [
   "Win32_Foundation",
   "Win32_Security",                    # CreateMutexW（二重起動防止）の引数の型
   "Win32_System_Console",              # --console でログ用のコンソールを開く
-  "Win32_System_ProcessStatus",        # bench のメモリ計測
   "Win32_System_Registry",             # 自動起動の登録（HKCU\...\Run）
   "Win32_System_Threading",            # 二重起動防止、スレッド ID、バックグラウンド優先度
   "Win32_UI_Input_KeyboardAndMouse",   # Ctrl+V の送信、修飾キーの状態

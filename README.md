@@ -94,7 +94,6 @@ mise run deploy
 - `mise run fmt` で整形、`mise run lint` で整形のずれと clippy の警告をチェックする。CI でも同じチェックを行い、警告が 1 つでもあると失敗する
 
 - ログを見たいときは `azarasi-voice.exe --console` で起動する
-- 速度とメモリは `cargo run --release --bin bench -- <モデルのディレクトリ> <スレッド数> <wav>...` で計測できる
 - 初回セットアップ画面の動作確認は、環境変数 `AZARASI_VOICE_MODEL_DIR` に空のフォルダを指定して `azarasi-voice.exe --setup` を起動する
 
 ## ライセンス

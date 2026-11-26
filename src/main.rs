@@ -1,6 +1,6 @@
 //! azarasi-voice 本体。Win + 左 Ctrl を押している間だけ録音し、離したら文字にして貼り付ける。
 //!
-//! azarasi-voice.exe [--console] [--model <dir>]
+//! azarasi-voice.exe [--console]
 //! azarasi-voice.exe --settings   … 設定画面（トレイから起動される別プロセス）
 //! azarasi-voice.exe --setup      … 初回のモデルのダウンロード画面（モデルが無いと自動で起動される）
 //!
@@ -94,10 +94,8 @@ fn acquire_single_instance(name: &str) -> bool {
 
 #[cfg(windows)]
 fn main() -> anyhow::Result<()> {
-    use anyhow::Context;
     use config::Config;
     use hotkey::HotkeyEvent;
-    use std::path::PathBuf;
     use std::sync::mpsc;
 
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -112,14 +110,11 @@ fn main() -> anyhow::Result<()> {
         return setup::run();
     }
 
-    let mut model_dir: Option<PathBuf> = None;
-    let mut it = args.iter();
-    while let Some(a) = it.next() {
+    for a in &args {
         match a.as_str() {
             "--console" => unsafe {
                 windows_sys::Win32::System::Console::AllocConsole();
             },
-            "--model" => model_dir = Some(it.next().context("--model に値がない")?.into()),
             other => anyhow::bail!("不明な引数: {other}"),
         }
     }
@@ -128,31 +123,16 @@ fn main() -> anyhow::Result<()> {
         return Ok(()); // 既に常駐している
     }
 
-    // --model で指定したときは別のモデルかもしれないので、ハッシュの確認はしない
-    let verify_model = model_dir.is_none();
-    let model_dir = match model_dir {
-        Some(dir) => {
-            anyhow::ensure!(
-                dir.join("model.int8.onnx").exists(),
-                "モデルが見つからない: {}",
-                dir.display()
-            );
-            dir
+    let model_dir = model::default_dir()?;
+    if !model::is_ready(&model_dir) {
+        // 初回：ダウンロード画面を別プロセスで出して、終わるのを待つ
+        std::process::Command::new(std::env::current_exe()?)
+            .arg("--setup")
+            .status()?;
+        if !model::is_ready(&model_dir) {
+            return Ok(()); // キャンセルされた
         }
-        None => {
-            let dir = model::default_dir()?;
-            if !model::is_ready(&dir) {
-                // 初回：ダウンロード画面を別プロセスで出して、終わるのを待つ
-                std::process::Command::new(std::env::current_exe()?)
-                    .arg("--setup")
-                    .status()?;
-                if !model::is_ready(&dir) {
-                    return Ok(()); // キャンセルされた
-                }
-            }
-            dir
-        }
-    };
+    }
 
     // 音声認識ワーカー
     let mut config = Config::load();
@@ -174,7 +154,7 @@ fn main() -> anyhow::Result<()> {
     });
 
     // 起動時に裏でモデルのハッシュを確かめる。壊れていたら消して、ダウンロード画面を出す
-    if verify_model {
+    {
         let job_tx = job_tx.clone();
         std::thread::spawn(move || verify_model_in_background(&model_dir, &job_tx));
     }
