@@ -9,7 +9,7 @@ GPU を一切使わないので、ゲームをしながらでも気にせず使�
 - 🇯🇵 **日本語専用モデル**：NVIDIA が日本語だけで学習させた [Parakeet 日本語版](https://huggingface.co/nvidia/parakeet-tdt_ctc-0.6b-ja) を使う
 - 🔒 **完全ローカル**：音声も文字も外部に送らない。無料・オープンソース
 
-[📚 ドキュメントサイト](https://azarasi1226.github.io/azarasi-voice/)（仕組みと開発）
+[📚 ドキュメントサイト](https://azarasi1226.github.io/azarasi-voice/)
 
 ## インストール
 
@@ -32,13 +32,6 @@ GPU を一切使わないので、ゲームをしながらでも気にせず使�
 | 13 秒の音声の認識 | 約 0.3 秒 |
 | メモリ（モデル読み込み中） | 約 700〜800 MB |
 | メモリ（モデル解放後） | 約 30〜40 MB |
-
-## 仕組みと開発
-
-[ドキュメントサイト](https://azarasi1226.github.io/azarasi-voice/)にまとめている（リポジトリの [`docs/`](docs/) にある HTML）。
-
-- [全体の構成](https://azarasi1226.github.io/azarasi-voice/overview.html)、[録音から貼り付けまで](https://azarasi1226.github.io/azarasi-voice/recording.html)、[音声認識モデル](https://azarasi1226.github.io/azarasi-voice/model.html)、[設定と画面](https://azarasi1226.github.io/azarasi-voice/settings.html)
-- [開発環境の構築](https://azarasi1226.github.io/azarasi-voice/development.html)、[リリースと配布](https://azarasi1226.github.io/azarasi-voice/release.html)
 
 ## ライセンス
 
