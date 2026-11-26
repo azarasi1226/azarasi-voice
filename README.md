@@ -28,21 +28,6 @@ GPU を一切使わないので、ゲームをしながらでも気にせず使�
 - Windows のスマート アプリ コントロールがオンだと、署名のない exe は起動できない。[SignPath Foundation](https://signpath.org/) のオープンソース向けの無料署名を申請する予定
 - 管理者権限で動いているウィンドウ（一部のゲームなど）には貼り付けられない（Windows の仕組み上の制限）
 
-## プライバシー
-
-azarasi-voice は、初回起動時の音声認識モデルのダウンロード（このリポジトリの GitHub Releases から）を除いて、ネットワークに接続しない。録音した音声も、認識した文字も、外部には送らない。
-
-This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The only network access is the one-time download of the speech recognition model from this repository's GitHub Releases.
-
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/)（申請予定）
-
-- Committers and reviewers: [azarasi1226](https://github.com/azarasi1226)
-- Approvers: [azarasi1226](https://github.com/azarasi1226)
-
-署名する exe は、このリポジトリのソースから GitHub Actions で自動ビルドしたものだけ。
-
 ## 計測例（Ryzen 9 9900X3D、4 スレッド）
 
 | 項目 | 結果 |
@@ -61,7 +46,7 @@ Free code signing provided by [SignPath.io](https://about.signpath.io/), certifi
 
 ## ライセンス
 
-[GPL-3.0](LICENSE)
+[GPL-3.0](LICENSE)。コード署名とプライバシーについては [Code signing policy](CODE_SIGNING_POLICY.md) を参照。
 
 使っている主なもの：
 
